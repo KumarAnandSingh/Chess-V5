@@ -1,0 +1,342 @@
+import { Chess } from 'chess.js';
+import { v4 as uuidv4 } from 'uuid';
+import { PlayerSocket, GameRoom, TimeControl } from './websocket';
+import { calculateEloRating } from '../utils/eloCalculation';
+import DatabaseService from './database';
+
+export interface GameState {
+  id: string;
+  position: string;
+  moves: string[];
+  turn: 'white' | 'black';
+  status: 'active' | 'checkmate' | 'draw' | 'resigned' | 'timeout';
+  result?: '1-0' | '0-1' | '1/2-1/2';
+  winner?: 'white' | 'black' | null;
+  reason?: string;
+  moveNumber: number;
+  whiteTime: number;
+  blackTime: number;
+  whiteRatingChange?: number;
+  blackRatingChange?: number;
+  startTime: Date;
+  endTime?: Date;
+  duration?: number;
+  finalPosition?: string;
+}
+
+export class GameManager {
+  private activeGames: Map<string, GameRoom>;
+  private gameStates: Map<string, GameState>;
+
+  constructor() {
+    this.activeGames = new Map();
+    this.gameStates = new Map();
+  }
+
+  async createGame(white: PlayerSocket, black: PlayerSocket, timeControl: TimeControl): Promise<GameRoom> {
+    const gameId = uuidv4();
+    const chess = new Chess();
+
+    // Initialize game state
+    const gameState: GameState = {
+      id: gameId,
+      position: chess.fen(),
+      moves: [],
+      turn: 'white',
+      status: 'active',
+      moveNumber: 1,
+      whiteTime: timeControl.initial * 1000, // Convert to milliseconds
+      blackTime: timeControl.initial * 1000,
+      startTime: new Date()
+    };
+
+    // Create game room
+    const gameRoom: GameRoom = {
+      id: gameId,
+      white,
+      black,
+      gameState: chess,
+      spectators: [],
+      timeControl,
+      startTime: new Date(),
+      lastMoveTime: new Date(),
+      whiteTime: timeControl.initial * 1000,
+      blackTime: timeControl.initial * 1000
+    };
+
+    // Store game data
+    this.activeGames.set(gameId, gameRoom);
+    this.gameStates.set(gameId, gameState);
+
+    // Save game to database
+    await this.saveGameToDatabase(gameState, white, black);
+
+    console.log(`🎮 Game created: ${gameId} - ${white.username} (${white.rating}) vs ${black.username} (${black.rating})`);
+    
+    return gameRoom;
+  }
+
+  async makeMove(gameId: string, playerId: string, move: any, timeLeft: number): Promise<GameState> {
+    const gameRoom = this.activeGames.get(gameId);
+    const gameState = this.gameStates.get(gameId);
+
+    if (!gameRoom || !gameState) {
+      throw new Error('Game not found');
+    }
+
+    // Verify it's the player's turn
+    const isWhiteTurn = gameState.turn === 'white';
+    const isPlayerWhite = gameRoom.white.userId === playerId;
+
+    if (isWhiteTurn !== isPlayerWhite) {
+      throw new Error('Not your turn');
+    }
+
+    try {
+      // Make move on chess engine
+      const chessMove = gameRoom.gameState.move(move);
+      if (!chessMove) {
+        throw new Error('Invalid move');
+      }
+
+      // Update time
+      const currentTime = Date.now();
+      const timeSinceLastMove = currentTime - gameRoom.lastMoveTime.getTime();
+      
+      if (isPlayerWhite) {
+        gameRoom.whiteTime = Math.max(0, timeLeft);
+        gameState.whiteTime = gameRoom.whiteTime;
+      } else {
+        gameRoom.blackTime = Math.max(0, timeLeft);
+        gameState.blackTime = gameRoom.blackTime;
+      }
+
+      // Add increment if applicable
+      if (gameRoom.timeControl.increment > 0) {
+        if (isPlayerWhite) {
+          gameRoom.whiteTime += gameRoom.timeControl.increment * 1000;
+          gameState.whiteTime = gameRoom.whiteTime;
+        } else {
+          gameRoom.blackTime += gameRoom.timeControl.increment * 1000;
+          gameState.blackTime = gameRoom.blackTime;
+        }
+      }
+
+      // Update game state
+      gameState.position = gameRoom.gameState.fen();
+      gameState.moves.push(chessMove.san);
+      gameState.turn = gameRoom.gameState.turn() === 'w' ? 'white' : 'black';
+      gameRoom.lastMoveTime = new Date();
+
+      // Check for game end conditions
+      if (gameRoom.gameState.isGameOver()) {
+        if (gameRoom.gameState.isCheckmate()) {
+          gameState.status = 'checkmate';
+          gameState.winner = gameRoom.gameState.turn() === 'w' ? 'black' : 'white';
+          gameState.result = gameState.winner === 'white' ? '1-0' : '0-1';
+          gameState.reason = 'checkmate';
+        } else if (gameRoom.gameState.isDraw()) {
+          gameState.status = 'draw';
+          gameState.result = '1/2-1/2';
+          gameState.reason = this.getDrawReason(gameRoom.gameState);
+        }
+
+        // Calculate rating changes if game is finished
+        if (gameState.status !== 'active') {
+          await this.calculateRatingChanges(gameState, gameRoom);
+        }
+      }
+
+      // Increment move number for black's moves
+      if (gameState.turn === 'white') {
+        gameState.moveNumber++;
+      }
+
+      // Update database
+      await this.updateGameInDatabase(gameState);
+
+      return gameState;
+
+    } catch (error) {
+      console.error('Error making move:', error);
+      throw new Error('Failed to make move');
+    }
+  }
+
+  async endGame(gameId: string, winner: 'white' | 'black' | 'draw', reason: string): Promise<GameState> {
+    const gameRoom = this.activeGames.get(gameId);
+    const gameState = this.gameStates.get(gameId);
+
+    if (!gameRoom || !gameState) {
+      throw new Error('Game not found');
+    }
+
+    // Update game state
+    gameState.status = winner === 'draw' ? 'draw' : (reason === 'timeout' ? 'timeout' : 'resigned');
+    gameState.winner = winner === 'draw' ? null : winner;
+    gameState.result = winner === 'draw' ? '1/2-1/2' : (winner === 'white' ? '1-0' : '0-1');
+    gameState.reason = reason;
+    gameState.endTime = new Date();
+    gameState.duration = gameState.endTime.getTime() - gameState.startTime.getTime();
+    gameState.finalPosition = gameRoom.gameState.fen();
+
+    // Calculate rating changes
+    await this.calculateRatingChanges(gameState, gameRoom);
+
+    // Update database
+    await this.updateGameInDatabase(gameState);
+
+    return gameState;
+  }
+
+  private async calculateRatingChanges(gameState: GameState, gameRoom: GameRoom): Promise<void> {
+    const whiteRating = gameRoom.white.rating;
+    const blackRating = gameRoom.black.rating;
+
+    let whiteScore = 0.5; // Default to draw
+    let blackScore = 0.5;
+
+    if (gameState.winner === 'white') {
+      whiteScore = 1;
+      blackScore = 0;
+    } else if (gameState.winner === 'black') {
+      whiteScore = 0;
+      blackScore = 1;
+    }
+
+    const whiteNewRating = calculateEloRating(whiteRating, blackRating, whiteScore);
+    const blackNewRating = calculateEloRating(blackRating, whiteRating, blackScore);
+
+    gameState.whiteRatingChange = whiteNewRating - whiteRating;
+    gameState.blackRatingChange = blackNewRating - blackRating;
+
+    // Update player ratings in database
+    try {
+      const db = DatabaseService.getInstance();
+      
+      await db.$transaction([
+        db.userStats.update({
+          where: { userId: gameRoom.white.userId },
+          data: { 
+            rating: whiteNewRating,
+            totalGamesPlayed: { increment: 1 },
+            ...(gameState.winner === 'white' ? { gamesWon: { increment: 1 } } : 
+               gameState.winner === 'black' ? { gamesLost: { increment: 1 } } : 
+               { gamesDrawn: { increment: 1 } })
+          }
+        }),
+        db.userStats.update({
+          where: { userId: gameRoom.black.userId },
+          data: { 
+            rating: blackNewRating,
+            totalGamesPlayed: { increment: 1 },
+            ...(gameState.winner === 'black' ? { gamesWon: { increment: 1 } } : 
+               gameState.winner === 'white' ? { gamesLost: { increment: 1 } } : 
+               { gamesDrawn: { increment: 1 } })
+          }
+        })
+      ]);
+
+      // Update local player ratings
+      gameRoom.white.rating = whiteNewRating;
+      gameRoom.black.rating = blackNewRating;
+
+    } catch (error) {
+      console.error('Error updating player ratings:', error);
+    }
+  }
+
+  private getDrawReason(chess: Chess): string {
+    if (chess.isStalemate()) return 'stalemate';
+    if (chess.isThreefoldRepetition()) return 'threefold_repetition';
+    if (chess.isInsufficientMaterial()) return 'insufficient_material';
+    if (chess.isDraw()) return 'fifty_move_rule';
+    return 'mutual_agreement';
+  }
+
+  handlePlayerDisconnect(userId: string): void {
+    // Find games where this player is participating
+    for (const [gameId, gameRoom] of this.activeGames.entries()) {
+      if (gameRoom.white.userId === userId || gameRoom.black.userId === userId) {
+        // For now, pause the game - in production, you might want to 
+        // give the player time to reconnect before declaring them lost
+        console.log(`⏸️ Player disconnected from game ${gameId}, game paused`);
+        
+        // You could implement a reconnection grace period here
+        // For now, we'll just log it
+      }
+    }
+  }
+
+  getGame(gameId: string): GameRoom | undefined {
+    return this.activeGames.get(gameId);
+  }
+
+  getGameState(gameId: string): GameState | undefined {
+    return this.gameStates.get(gameId);
+  }
+
+  cleanupGame(gameId: string): void {
+    this.activeGames.delete(gameId);
+    this.gameStates.delete(gameId);
+  }
+
+  getActiveGamesCount(): number {
+    return this.activeGames.size;
+  }
+
+  getAllActiveGames(): GameRoom[] {
+    return Array.from(this.activeGames.values());
+  }
+
+  private async saveGameToDatabase(gameState: GameState, white: PlayerSocket, black: PlayerSocket): Promise<void> {
+    try {
+      const db = DatabaseService.getInstance();
+      
+      await db.multiplayerGame.create({
+        data: {
+          id: gameState.id,
+          gameId: gameState.id.slice(0, 8), // Short game ID
+          whitePlayerId: white.userId,
+          blackPlayerId: black.userId,
+          currentFen: gameState.position,
+          moves: gameState.moves,
+          status: gameState.status,
+          whiteTimeLeft: gameState.whiteTime,
+          blackTimeLeft: gameState.blackTime,
+          timeControl: `${Math.floor(gameState.whiteTime / 60000)}+0`, // Convert to minutes+increment format
+          moveCount: gameState.moves.length,
+          createdAt: gameState.startTime,
+          updatedAt: new Date()
+        }
+      });
+    } catch (error) {
+      console.error('Error saving game to database:', error);
+    }
+  }
+
+  private async updateGameInDatabase(gameState: GameState): Promise<void> {
+    try {
+      const db = DatabaseService.getInstance();
+      
+      await db.multiplayerGame.update({
+        where: { id: gameState.id },
+        data: {
+          currentFen: gameState.position,
+          moves: gameState.moves,
+          status: gameState.status,
+          result: gameState.result || null,
+          winner: gameState.winner || null,
+          termination: gameState.reason || null,
+          whiteTimeLeft: gameState.whiteTime,
+          blackTimeLeft: gameState.blackTime,
+          moveCount: gameState.moves.length,
+          completedAt: gameState.endTime || null,
+          updatedAt: new Date()
+        }
+      });
+    } catch (error) {
+      console.error('Error updating game in database:', error);
+    }
+  }
+}

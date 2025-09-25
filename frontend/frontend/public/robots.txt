@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+
+# Priority pages for indexing
+Allow: /play
+Allow: /lessons
+Allow: /dashboard
+Allow: /puzzles
+Allow: /leaderboard
+
+# Sitemap location
+Sitemap: https://studyify.in/sitemap.xml
+
+# Block any sensitive paths
+Disallow: /api/
+Disallow: /.well-known/
+Disallow: /admin/

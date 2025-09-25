@@ -1,0 +1,701 @@
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Chess } from 'chess.js';
+import { ChessBoard } from '../chess/ChessBoard';  // ✅ USE THE WORKING WRAPPER!
+import { io, Socket } from 'socket.io-client';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../ui/button';
+import { getDisplayName } from '../../utils/nameGenerator';
+import { Maximize2, Minimize2, Send, Smile } from 'lucide-react';
+
+interface SimpleLiveChessGameProps {
+  gameId: string;
+}
+
+interface GameData {
+  gameId: string;
+  white: { username: string; rating: number; userId: string };
+  black: { username: string; rating: number; userId: string };
+  position: string;
+  whiteTime: number;
+  blackTime: number;
+  turn: 'w' | 'b';
+  moveNumber: number;
+  timeControl: {
+    initial: number;
+    increment: number;
+    type: string;
+  };
+}
+
+interface ChatMessage {
+  username: string;
+  message: string;
+  timestamp: string;
+}
+
+const SimpleLiveChessGame: React.FC<SimpleLiveChessGameProps> = ({ gameId }) => {
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [chess] = useState(new Chess());
+  const [gamePosition, setGamePosition] = useState(chess.fen());
+  
+  // New UI state
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [boardSize, setBoardSize] = useState(600);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  
+  // Common emojis for chess chat
+  const commonEmojis = ['😊', '😂', '🤔', '😎', '👍', '👎', '💪', '🔥', '⚡', '👑', '🎯', '💯'];
+  const [gameData, setGameData] = useState<GameData | null>(null);
+  const [playerColor, setPlayerColor] = useState<'white' | 'black' | 'spectator'>('spectator');
+  const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
+  const [gameStatus, setGameStatus] = useState<'active' | 'ended'>('active');
+  const [gameResult, setGameResult] = useState<any>(null);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [currentUserId, setCurrentUserId] = useState<string>('');
+  const [optionSquares, setOptionSquares] = useState<{ [square: string]: { background: string } }>({});
+  const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
+  const [displayWhiteTime, setDisplayWhiteTime] = useState<number>(0);
+  const [displayBlackTime, setDisplayBlackTime] = useState<number>(0);
+
+  // WebSocket connection setup
+  useEffect(() => {
+    const newSocket = io('http://localhost:3001');
+    setSocket(newSocket);
+    setConnectionStatus('connecting');
+
+    // Generate a consistent user ID for this browser session
+    let userId = sessionStorage.getItem('chessUserId');
+    if (!userId) {
+      userId = 'demo-user-' + Math.random().toString(36).substr(2, 6);
+      sessionStorage.setItem('chessUserId', userId);
+    }
+    setCurrentUserId(userId);
+
+    newSocket.on('connect', () => {
+      console.log('✅ Connected to game server');
+      setConnectionStatus('connected');
+      
+      // Get consistent username from session storage
+      let username = sessionStorage.getItem('chessUsername');
+      if (!username) {
+        username = 'Player' + Math.floor(Math.random() * 1000);
+        sessionStorage.setItem('chessUsername', username);
+      }
+      
+      // Authenticate first
+      newSocket.emit('authenticate', {
+        userId,
+        username,
+        rating: 1200 + Math.floor(Math.random() * 400)
+      });
+    });
+
+    newSocket.on('authenticated', () => {
+      // Try to join game - backend will determine if we're a player or spectator
+      newSocket.emit('join_game', { gameId });
+    });
+
+    newSocket.on('game_started', (data: GameData) => {
+      console.log('🎮 Game started:', data);
+      console.log('🎮 Game started - full data:', JSON.stringify(data, null, 2));
+      console.log('🎮 Current userId:', userId);
+      console.log('🎮 White userId:', data.white?.userId);
+      console.log('🎮 Black userId:', data.black?.userId);
+      
+      setGameData(data);
+      
+      // Determine player color
+      if (data.white.userId === userId) {
+        console.log('🎮 Setting player color to WHITE');
+        setPlayerColor('white');
+      } else if (data.black.userId === userId) {
+        console.log('🎮 Setting player color to BLACK');
+        setPlayerColor('black');
+      } else {
+        console.log('🎮 Setting player color to SPECTATOR');
+        setPlayerColor('spectator');
+      }
+      
+      // Properly sync chess instance with server position
+      console.log('🔄 Syncing chess instance with position:', data.position);
+      chess.load(data.position);
+      setGamePosition(data.position);
+      console.log('✅ Chess instance synced. Current FEN:', chess.fen());
+      console.log('♟️ Current turn:', chess.turn());
+      console.log('📋 Legal moves:', chess.moves().length);
+    });
+
+    newSocket.on('spectating_started', (data) => {
+      console.log('👀 Spectating game:', data);
+      setGameData({
+        gameId,
+        white: data.players.white,
+        black: data.players.black,
+        position: data.position,
+        whiteTime: data.whiteTime,
+        blackTime: data.blackTime,
+        turn: data.position.split(' ')[1] as 'w' | 'b',
+        moveNumber: parseInt(data.position.split(' ')[5]) || 1,
+        timeControl: { initial: 300, increment: 0, type: 'blitz' }
+      });
+      
+      // Properly sync chess instance with server position
+      console.log('🔄 Syncing chess instance for spectator with position:', data.position);
+      chess.load(data.position);
+      setGamePosition(data.position);
+      setPlayerColor('spectator');
+      console.log('✅ Chess instance synced for spectator. Current FEN:', chess.fen());
+      console.log('♟️ Current turn:', chess.turn());
+    });
+
+    newSocket.on('move_made', (data) => {
+      console.log('🎯 FRONTEND: move_made event received:', data);
+      console.log('🎯 FRONTEND: Event timestamp:', new Date().toISOString());
+      console.log('🔄 Current gamePosition before update:', gamePosition);
+      console.log('🔄 Current gameData exists:', !!gameData);
+      
+      if (data.position) {
+        console.log('🔄 Updating chess position to:', data.position);
+        chess.load(data.position);
+        
+        // ✅ Force React re-render by ensuring state actually changes
+        setGamePosition(prevPos => {
+          console.log('🔄 setGamePosition: old =', prevPos, 'new =', data.position);
+          return data.position;
+        });
+        
+        // ✅ Always update gameData, don't depend on stale closure
+        setGameData(prev => {
+          console.log('🔄 setGameData: updating with new position');
+          if (!prev) {
+            console.log('⚠️ setGameData: prev is null, creating new gameData');
+            return {
+              position: data.position,
+              whiteTime: data.whiteTime,
+              blackTime: data.blackTime,
+              turn: data.turn,
+              moveNumber: data.moveNumber,
+              white: { username: 'Player1', rating: 1500 },
+              black: { username: 'Player2', rating: 1500 },
+              timeControl: { type: 'blitz', initial: 300, increment: 3 }
+            };
+          }
+          return {
+            ...prev,
+            position: data.position,
+            whiteTime: data.whiteTime,
+            blackTime: data.blackTime,
+            turn: data.turn,
+            moveNumber: data.moveNumber
+          };
+        });
+        
+        // Highlight last move
+        if (data.lastMove && data.lastMove.from && data.lastMove.to) {
+          setLastMove({ from: data.lastMove.from, to: data.lastMove.to });
+        }
+        
+        // Check for game end
+        if (data.gameResult) {
+          setGameStatus('ended');
+          setGameResult(data.gameResult);
+        }
+        
+        // Clear selection after move
+        setSelectedSquare(null);
+        setOptionSquares({});
+      }
+    });
+
+    newSocket.on('game_ended', (data) => {
+      console.log('🏁 Game ended:', data);
+      setGameStatus('ended');
+      setGameResult(data);
+    });
+
+    newSocket.on('chat_message', (data: ChatMessage) => {
+      setChatMessages(prev => [...prev, data]);
+    });
+
+    newSocket.on('player_disconnected', (data) => {
+      console.log('👋 Player disconnected:', data);
+      setChatMessages(prev => [...prev, {
+        username: 'System',
+        message: data.message,
+        timestamp: new Date().toISOString()
+      }]);
+    });
+
+    newSocket.on('game_not_found', (data) => {
+      console.log('❌ Game not found:', data);
+      console.log('🔄 Redirecting to lobby to create new game...');
+      // Game no longer exists (server restart), redirect to lobby
+      window.location.href = '/multiplayer';
+    });
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, [gameId]);
+
+  // ⏰ Countdown Timer Effect
+  useEffect(() => {
+    if (!gameData || gameStatus !== 'active') return;
+    
+    // Initialize display times from server data
+    setDisplayWhiteTime(gameData.whiteTime);
+    setDisplayBlackTime(gameData.blackTime);
+    
+    const timer = setInterval(() => {
+      if (gameData.turn === 'w') {
+        setDisplayWhiteTime(prev => Math.max(0, prev - 1000));
+      } else {
+        setDisplayBlackTime(prev => Math.max(0, prev - 1000));
+      }
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [gameData?.turn, gameData?.whiteTime, gameData?.blackTime, gameStatus]);
+
+  // ✅ Force re-render when gamePosition changes
+  useEffect(() => {
+    console.log('🔄 useEffect: gamePosition changed to:', gamePosition);
+    console.log('🔄 useEffect: ChessBoard should re-render with new FEN');
+  }, [gamePosition]);
+
+  // Sync display times when server sends updates
+  useEffect(() => {
+    if (gameData) {
+      setDisplayWhiteTime(gameData.whiteTime);
+      setDisplayBlackTime(gameData.blackTime);
+    }
+  }, [gameData?.whiteTime, gameData?.blackTime]);
+
+  // Function to show valid moves when a piece is selected
+  const showPossibleMoves = (square: string) => {
+    const moves = chess.moves({ square, verbose: true });
+    const newSquares: { [square: string]: { background: string } } = {};
+    
+    moves.forEach((move) => {
+      newSquares[move.to] = { background: 'radial-gradient(circle, #00ff00 25%, transparent 25%)' };
+    });
+    
+    setOptionSquares(newSquares);
+    setSelectedSquare(square);
+  };
+
+  // Function to handle square click (using correct API)
+  const handleSquareClick = useCallback(({ piece, square }: { piece: any; square: string }) => {
+    console.log(`🖱️ Square clicked: ${square} with piece:`, piece);
+    console.log(`🎮 Game data:`, { playerColor, gameStatus, turn: gameData?.turn });
+    
+    if (!gameData || playerColor === 'spectator' || gameStatus === 'ended') {
+      console.log(`❌ Click blocked: gameData=${!!gameData}, playerColor=${playerColor}, gameStatus=${gameStatus}`);
+      return;
+    }
+
+    // Check if it's player's turn
+    const isPlayerTurn = (playerColor === 'white' && gameData.turn === 'w') || 
+                        (playerColor === 'black' && gameData.turn === 'b');
+    
+    console.log(`🔄 Turn check: playerColor=${playerColor}, gameData.turn=${gameData.turn}, isPlayerTurn=${isPlayerTurn}`);
+    
+    if (!isPlayerTurn) {
+      console.log(`❌ Not player's turn!`);
+      return;
+    }
+
+    // If clicking on an already selected square, deselect it
+    if (selectedSquare === square) {
+      setSelectedSquare(null);
+      setOptionSquares({});
+      return;
+    }
+
+    // If a piece was previously selected, try to make a move
+    if (selectedSquare) {
+      makeMove(selectedSquare, square);
+      setSelectedSquare(null);
+      setOptionSquares({});
+    } else {
+      // Select the piece and show possible moves
+      const chessPiece = chess.get(square);
+      if (chessPiece && 
+          ((playerColor === 'white' && chessPiece.color === 'w') || 
+           (playerColor === 'black' && chessPiece.color === 'b'))) {
+        showPossibleMoves(square);
+      }
+    }
+  }, [gameData, playerColor, gameStatus, selectedSquare, chess]);
+
+  // Handle piece drop (using correct API)
+  const handlePieceDrop = useCallback(({ piece, sourceSquare, targetSquare }: { piece: any; sourceSquare: string; targetSquare: string }) => {
+    console.log(`🎯 Piece dropped: ${sourceSquare} → ${targetSquare}`);
+    console.log(`🎮 Drop context:`, { 
+      socket: !!socket, 
+      gameData: !!gameData, 
+      playerColor, 
+      gameStatus,
+      connected: socket?.connected,
+      turn: gameData?.turn,
+      userId: currentUserId,
+      whiteUserId: gameData?.white?.userId,
+      blackUserId: gameData?.black?.userId
+    });
+    
+    if (!socket) {
+      console.log(`❌ Drop blocked: No socket connection`);
+      return false;
+    }
+    if (!socket.connected) {
+      console.log(`❌ Drop blocked: Socket not connected`);
+      return false;
+    }
+    if (!gameData) {
+      console.log(`❌ Drop blocked: No game data loaded`);
+      return false;
+    }
+    if (playerColor === 'spectator') {
+      console.log(`❌ Drop blocked: Player is spectator`);
+      return false;
+    }
+    if (gameStatus === 'ended') {
+      console.log(`❌ Drop blocked: Game has ended`);
+      return false;
+    }
+
+    // Check if it's player's turn
+    const isPlayerTurn = (playerColor === 'white' && gameData.turn === 'w') || 
+                        (playerColor === 'black' && gameData.turn === 'b');
+    
+    console.log(`🔄 Turn validation in drop: isPlayerTurn=${isPlayerTurn}`);
+    
+    if (!isPlayerTurn) {
+      console.log(`❌ Not player's turn in drop!`);
+      return false;
+    }
+
+    // Always send move to server for validation instead of validating locally
+    // The server has the authoritative game state
+    console.log(`🚀 Sending move to server: ${sourceSquare} → ${targetSquare}`);
+    
+    const moveData = {
+      gameId,
+      move: {
+        from: sourceSquare,
+        to: targetSquare,
+        promotion: 'q' // Always promote to queen for simplicity
+      },
+      timeLeft: playerColor === 'white' ? gameData.whiteTime : gameData.blackTime
+    };
+    
+    console.log('🎯 FRONTEND: Sending make_move event:', moveData);
+    console.log('🎯 FRONTEND: Send timestamp:', new Date().toISOString());
+    
+    socket.emit('make_move', moveData);
+    
+    // Return true to allow the visual move while we wait for server validation
+    // If the move is invalid, the server will reject it and not broadcast the move_made event
+    return true;
+  }, [socket, gameData, playerColor, gameStatus, gameId]);
+
+  // Helper function for click-to-move
+  const makeMove = useCallback((sourceSquare: string, targetSquare: string) => {
+    return handlePieceDrop({ piece: null, sourceSquare, targetSquare });
+  }, [handlePieceDrop]);
+
+  // ✅ NEW: ChessBoard wrapper compatibility function
+  const handleMove = useCallback((move: { from: string; to: string; promotion?: string }) => {
+    console.log(`🎯 Frontend: ChessBoard wrapper move attempt:`, move);
+    console.log(`🎯 Frontend: Current game state:`, {
+      playerColor,
+      gameStatus,
+      gamePosition,
+      currentTurn: gameData?.turn,
+      disabled: playerColor === 'spectator' || gameStatus === 'ended'
+    });
+    
+    if (playerColor === 'spectator' || gameStatus === 'ended') {
+      console.log(`❌ Frontend: Move blocked - disabled state`);
+      return false;
+    }
+    
+    return handlePieceDrop({ 
+      piece: null, 
+      sourceSquare: move.from, 
+      targetSquare: move.to 
+    });
+  }, [handlePieceDrop, playerColor, gameStatus, gamePosition, gameData]);
+
+  const sendChatMessage = () => {
+    if (!socket || !chatInput.trim()) return;
+    
+    socket.emit('game_chat', {
+      gameId,
+      message: chatInput.trim()
+    });
+    
+    setChatInput('');
+  };
+
+  const resignGame = () => {
+    if (!socket || playerColor === 'spectator') return;
+    
+    if (window.confirm('Are you sure you want to resign?')) {
+      socket.emit('resign', { gameId });
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 1000 / 60);
+    const secs = Math.floor((seconds / 1000) % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const getPieceSymbol = (piece: any) => {
+    const symbols = {
+      'wk': '♔', 'wq': '♕', 'wr': '♖', 'wb': '♗', 'wn': '♘', 'wp': '♙',
+      'bk': '♚', 'bq': '♛', 'br': '♜', 'bb': '♝', 'bn': '♞', 'bp': '♟'
+    };
+    return symbols[piece.color + piece.type] || '?';
+  };
+
+  // New helper functions
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
+    setBoardSize(isFullscreen ? 600 : Math.min(window.innerWidth - 100, window.innerHeight - 100));
+  };
+
+  const sendChatMessage = () => {
+    if (newMessage.trim() && socket) {
+      const message: ChatMessage = {
+        username: gameData?.white.username || gameData?.black.username || 'Player',
+        message: newMessage.trim(),
+        timestamp: new Date().toISOString()
+      };
+      socket.emit('chat_message', { gameId, message });
+      setChatMessages(prev => [...prev, message]);
+      setNewMessage('');
+      setShowEmojiPicker(false);
+    }
+  };
+
+  const addEmoji = (emoji: string) => {
+    setNewMessage(prev => prev + emoji);
+    setShowEmojiPicker(false);
+  };
+
+  // Get display names for players
+  const whiteDisplayName = useMemo(() => {
+    return gameData?.white ? getDisplayName(gameData.white.username, true) : 'White Player';
+  }, [gameData?.white]);
+
+  const blackDisplayName = useMemo(() => {
+    return gameData?.black ? getDisplayName(gameData.black.username, true) : 'Black Player';
+  }, [gameData?.black]);
+
+  console.log('🎮 SimpleLiveChessGame render:', { 
+    gameData: !!gameData, 
+    playerColor, 
+    connectionStatus,
+    gameId 
+  });
+
+  if (connectionStatus === 'connecting') {
+    console.log('🎮 Rendering connecting screen');
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <h2 className="text-xl font-bold">Connecting to game...</h2>
+        </div>
+      </div>
+    );
+  }
+
+  if (!gameData) {
+    console.log('🎮 Rendering no game data screen');
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-bold mb-4">Game not found</h2>
+          <p className="text-gray-400">The game may have ended or the ID is invalid.</p>
+        </div>
+      </div>
+    );
+  }
+
+  console.log('🎮 Rendering chess game with gameData:', gameData);
+
+  return (
+    <div className={`${isFullscreen ? 'fixed inset-0 z-50 bg-slate-900' : 'min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900'} text-white transition-all duration-300`}>
+      <div className={`${isFullscreen ? 'h-full flex items-center justify-center p-4' : 'max-w-7xl mx-auto p-4'}`}>
+        <div className={`${isFullscreen ? 'max-w-none' : 'grid grid-cols-1 xl:grid-cols-3 gap-6'}`}>
+          
+          {/* Main Game Board */}
+          <div className="lg:col-span-2">
+            <Card className="bg-gray-800 border-gray-700">
+              <CardContent className="p-6">
+                {/* Player Info - Black */}
+                <div className="flex items-center justify-between mb-4 p-3 rounded-lg bg-gray-700">
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 bg-black border border-white rounded-full"></div>
+                    <span className="font-semibold">{gameData.black.username}</span>
+                    <span className="text-gray-400">({gameData.black.rating})</span>
+                  </div>
+                  <div className="text-lg font-mono">
+                    {formatTime(displayBlackTime)}
+                  </div>
+                </div>
+                
+                {/* Chess Board */}
+                <div className="aspect-square max-w-full">
+                  {/* Debug info */}
+                  <div className="text-xs text-red-400 mb-2 p-4 bg-red-900 rounded border-2 border-red-600">
+                    <strong>DEBUG PANEL:</strong><br/>
+                    playerColor: {playerColor} | gameStatus: {gameStatus} | turn: {gameData?.turn} | hasGameData: {!!gameData}<br/>
+                    position: {gamePosition}<br/>
+                    gameId: {gameId}
+                  </div>
+                  
+                  {/* React Chessboard */}
+                  <div className="aspect-square max-w-full">
+                    {/* Debug info */}
+                    <div className="text-xs text-red-400 mb-2 p-4 bg-red-900 rounded border-2 border-red-600">
+                      <strong>DEBUG PANEL:</strong><br/>
+                      playerColor: {playerColor} | gameStatus: {gameStatus} | turn: {gameData?.turn} | hasGameData: {!!gameData}<br/>
+                      position: {gamePosition}<br/>
+                      gameId: {gameId}
+                    </div>
+                    
+                    <ChessBoard
+                      fen={gamePosition}
+                      orientation={playerColor === 'black' ? 'black' : 'white'}
+                      onMove={handleMove}
+                      disabled={playerColor === 'spectator' || gameStatus === 'ended'}
+                      showPieceTooltips={true}
+                      highlightMoves={true}
+                    />
+                  </div>
+                </div>
+                
+                {/* Player Info - White */}
+                <div className="flex items-center justify-between mt-4 p-3 rounded-lg bg-gray-700">
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 bg-white border border-gray-400 rounded-full"></div>
+                    <span className="font-semibold">{gameData.white.username}</span>
+                    <span className="text-gray-400">({gameData.white.rating})</span>
+                  </div>
+                  <div className="text-lg font-mono">
+                    {formatTime(displayWhiteTime)}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Game Info and Chat */}
+          <div className="lg:col-span-2 space-y-6">
+            
+            {/* Game Status */}
+            <Card className="bg-gray-800 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-center">
+                  {gameStatus === 'ended' 
+                    ? `Game Over - ${gameResult?.result || 'Draw'}`
+                    : `${gameData.turn === 'w' ? 'White' : 'Black'} to move`
+                  }
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center space-y-2">
+                  <p className="text-gray-400">
+                    Move #{gameData.moveNumber} • {gameData.timeControl.type} ({gameData.timeControl.initial/60}+{gameData.timeControl.increment})
+                  </p>
+                  
+                  {playerColor !== 'spectator' && gameStatus === 'active' && (
+                    <div className="flex gap-2 justify-center mt-4">
+                      <Button 
+                        onClick={resignGame}
+                        variant="destructive" 
+                        size="sm"
+                      >
+                        Resign
+                      </Button>
+                    </div>
+                  )}
+
+                  {gameStatus === 'ended' && gameResult && (
+                    <div className="mt-4 p-4 bg-gray-700 rounded-lg">
+                      <h3 className="font-semibold mb-2">Game Result</h3>
+                      <p>{gameResult.reason}</p>
+                      {gameResult.resignedBy && (
+                        <p className="text-gray-400 text-sm mt-1">
+                          {gameResult.resignedBy} resigned
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  
+                  {playerColor === 'spectator' && (
+                    <p className="text-blue-400 text-sm">👀 You are spectating this game</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Chat */}
+            <Card className="bg-gray-800 border-gray-700">
+              <CardHeader>
+                <CardTitle>Chat</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {/* Chat Messages */}
+                  <div className="h-48 overflow-y-auto space-y-2 border rounded p-3 bg-gray-900">
+                    {chatMessages.length === 0 ? (
+                      <p className="text-gray-500 text-sm">No messages yet...</p>
+                    ) : (
+                      chatMessages.map((msg, index) => (
+                        <div key={index} className="text-sm">
+                          <span className={`font-semibold ${
+                            msg.username === 'System' ? 'text-yellow-400' : 'text-blue-400'
+                          }`}>
+                            {msg.username}:
+                          </span>
+                          <span className="ml-2 text-gray-300">{msg.message}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  
+                  {/* Chat Input */}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
+                      placeholder="Type a message..."
+                      className="flex-1 bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+                    />
+                    <Button onClick={sendChatMessage} size="sm">
+                      Send
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default SimpleLiveChessGame;

@@ -1,0 +1,349 @@
+import { Server as SocketIOServer, Socket } from 'socket.io';
+import { Server as HTTPServer } from 'http';
+import { PlayerSocket, GameRoom, TimeControl } from '../types/multiplayer';
+import { validateMove } from '../utils/chessValidation';
+import { authenticateSocket } from '../middleware/socketAuth';
+
+// Import after types to avoid circular dependency
+class GameManager {
+  constructor() {}
+  createGame(player: PlayerSocket, opponent: PlayerSocket, timeControl: TimeControl): Promise<GameRoom> {
+    throw new Error('GameManager not implemented');
+  }
+  getGame(gameId: string): GameRoom | undefined {
+    throw new Error('GameManager not implemented');
+  }
+  makeMove(gameId: string, userId: string, move: any, timeLeft: number): Promise<any> {
+    throw new Error('GameManager not implemented');
+  }
+  endGame(gameId: string, result: string, reason: string): Promise<any> {
+    throw new Error('GameManager not implemented');
+  }
+  handlePlayerDisconnect(userId: string): void {
+    throw new Error('GameManager not implemented');
+  }
+  cleanupGame(gameId: string): void {
+    throw new Error('GameManager not implemented');
+  }
+  getActiveGamesCount(): number {
+    return 0;
+  }
+}
+
+class MatchmakingService {
+  constructor() {}
+  findMatch(player: PlayerSocket, timeControl: TimeControl, minRating?: number, maxRating?: number): Promise<PlayerSocket | null> {
+    return Promise.resolve(null);
+  }
+  addToQueue(player: PlayerSocket, timeControl: TimeControl): void {}
+  removeFromQueue(userId: string): void {}
+  getEstimatedWaitTime(rating: number): number {
+    return 30;
+  }
+  getQueueSize(): number {
+    return 0;
+  }
+}
+
+class WebSocketService {
+  private io: SocketIOServer;
+  private gameManager: GameManager;
+  private matchmaking: MatchmakingService;
+  private connectedUsers: Map<string, PlayerSocket>;
+
+  constructor(server: HTTPServer) {
+    this.io = new SocketIOServer(server, {
+      cors: {
+        origin: [
+          "http://localhost:5173",
+          "http://localhost:5174", 
+          "http://localhost:3000",
+          "https://studyify.in"
+        ],
+        methods: ["GET", "POST"],
+        credentials: true
+      },
+      transports: ['websocket', 'polling']
+    });
+
+    this.gameManager = new GameManager();
+    this.matchmaking = new MatchmakingService();
+    this.connectedUsers = new Map();
+
+    this.setupSocketHandlers();
+    
+    console.log('🎮 WebSocket server initialized for real-time multiplayer');
+  }
+
+  private setupSocketHandlers() {
+    this.io.on('connection', (socket) => {
+      console.log(`👤 User connected: ${socket.id}`);
+
+      // Authenticate user on connection
+      socket.use(authenticateSocket);
+
+      // Handle user authentication
+      socket.on('authenticate', async (data: { userId: string; username: string; rating?: number }) => {
+        try {
+          const playerSocket: PlayerSocket = {
+            id: socket.id,
+            userId: data.userId,
+            username: data.username,
+            rating: data.rating || 1200,
+            socket
+          };
+
+          this.connectedUsers.set(socket.id, playerSocket);
+          (socket as any).userId = data.userId;
+
+          socket.emit('authenticated', {
+            success: true,
+            playerInfo: {
+              id: playerSocket.id,
+              username: playerSocket.username,
+              rating: playerSocket.rating
+            }
+          });
+
+          console.log(`✅ User authenticated: ${data.username} (${data.userId})`);
+        } catch (error) {
+          socket.emit('authentication_error', { message: 'Authentication failed' });
+        }
+      });
+
+      // Handle matchmaking
+      socket.on('join_matchmaking', async (data: { timeControl: TimeControl; minRating?: number; maxRating?: number }) => {
+        try {
+          const player = this.connectedUsers.get(socket.id);
+          if (!player) {
+            socket.emit('error', { message: 'User not authenticated' });
+            return;
+          }
+
+          console.log(`🔍 ${player.username} joining matchmaking queue`);
+          
+          const opponent = await this.matchmaking.findMatch(player, data.timeControl, data.minRating, data.maxRating);
+          
+          if (opponent) {
+            // Create game room
+            const gameRoom = await this.gameManager.createGame(player, opponent, data.timeControl);
+            
+            // Join both players to game room
+            player.socket.join(gameRoom.id);
+            opponent.socket.join(gameRoom.id);
+
+            // Notify both players
+            this.io.to(gameRoom.id).emit('game_started', {
+              gameId: gameRoom.id,
+              white: { username: gameRoom.white.username, rating: gameRoom.white.rating },
+              black: { username: gameRoom.black.username, rating: gameRoom.black.rating },
+              timeControl: gameRoom.timeControl,
+              position: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+            });
+
+            console.log(`🎮 Game created: ${gameRoom.id} - ${player.username} vs ${opponent.username}`);
+          } else {
+            // Add to queue
+            this.matchmaking.addToQueue(player, data.timeControl);
+            socket.emit('matchmaking_queued', { 
+              message: 'Looking for opponent...',
+              estimatedTime: this.matchmaking.getEstimatedWaitTime(player.rating)
+            });
+          }
+        } catch (error) {
+          console.error('Matchmaking error:', error);
+          socket.emit('matchmaking_error', { message: 'Failed to join matchmaking' });
+        }
+      });
+
+      // Handle leaving matchmaking queue
+      socket.on('leave_matchmaking', () => {
+        const player = this.connectedUsers.get(socket.id);
+        if (player) {
+          this.matchmaking.removeFromQueue(player.userId);
+          socket.emit('matchmaking_left', { message: 'Left matchmaking queue' });
+        }
+      });
+
+      // Handle game moves
+      socket.on('make_move', async (data: { gameId: string; move: any; timeLeft: number }) => {
+        try {
+          const player = this.connectedUsers.get(socket.id);
+          if (!player) {
+            socket.emit('error', { message: 'User not authenticated' });
+            return;
+          }
+
+          const gameRoom = this.gameManager.getGame(data.gameId);
+          if (!gameRoom) {
+            socket.emit('error', { message: 'Game not found' });
+            return;
+          }
+
+          // Validate move
+          const isValidMove = validateMove(gameRoom.gameState, data.move, player.userId);
+          if (!isValidMove) {
+            socket.emit('invalid_move', { message: 'Invalid move' });
+            return;
+          }
+
+          // Apply move
+          const updatedGame = await this.gameManager.makeMove(data.gameId, player.userId, data.move, data.timeLeft);
+          
+          // Broadcast move to all players in room
+          this.io.to(data.gameId).emit('move_made', {
+            move: data.move,
+            position: updatedGame.position,
+            whiteTime: updatedGame.whiteTime,
+            blackTime: updatedGame.blackTime,
+            turn: updatedGame.turn,
+            moveNumber: updatedGame.moveNumber,
+            lastMove: data.move
+          });
+
+          // Check for game end conditions
+          if (updatedGame.status !== 'active') {
+            await this.handleGameEnd(updatedGame);
+          }
+
+        } catch (error) {
+          console.error('Move error:', error);
+          socket.emit('move_error', { message: 'Failed to make move' });
+        }
+      });
+
+      // Handle draw offers
+      socket.on('offer_draw', async (data: { gameId: string }) => {
+        const player = this.connectedUsers.get(socket.id);
+        const gameRoom = this.gameManager.getGame(data.gameId);
+        
+        if (player && gameRoom) {
+          const opponent = gameRoom.white.userId === player.userId ? gameRoom.black : gameRoom.white;
+          opponent.socket.emit('draw_offered', { 
+            offeredBy: player.username 
+          });
+        }
+      });
+
+      // Handle draw responses
+      socket.on('respond_draw', async (data: { gameId: string; accepted: boolean }) => {
+        const gameRoom = this.gameManager.getGame(data.gameId);
+        
+        if (gameRoom && data.accepted) {
+          const endedGame = await this.gameManager.endGame(data.gameId, 'draw', 'mutual_agreement');
+          await this.handleGameEnd(endedGame);
+        } else if (gameRoom) {
+          this.io.to(data.gameId).emit('draw_declined', {});
+        }
+      });
+
+      // Handle resignation
+      socket.on('resign', async (data: { gameId: string }) => {
+        const player = this.connectedUsers.get(socket.id);
+        const gameRoom = this.gameManager.getGame(data.gameId);
+        
+        if (player && gameRoom) {
+          const winner = gameRoom.white.userId === player.userId ? 'black' : 'white';
+          const endedGame = await this.gameManager.endGame(data.gameId, winner, 'resignation');
+          await this.handleGameEnd(endedGame);
+        }
+      });
+
+      // Handle spectating
+      socket.on('spectate_game', (data: { gameId: string }) => {
+        const player = this.connectedUsers.get(socket.id);
+        const gameRoom = this.gameManager.getGame(data.gameId);
+        
+        if (player && gameRoom) {
+          socket.join(data.gameId);
+          gameRoom.spectators.push(player);
+          
+          socket.emit('spectating_started', {
+            gameState: gameRoom.gameState,
+            players: {
+              white: { username: gameRoom.white.username, rating: gameRoom.white.rating },
+              black: { username: gameRoom.black.username, rating: gameRoom.black.rating }
+            }
+          });
+        }
+      });
+
+      // Handle chat messages
+      socket.on('game_chat', (data: { gameId: string; message: string }) => {
+        const player = this.connectedUsers.get(socket.id);
+        if (player && data.message.trim()) {
+          this.io.to(data.gameId).emit('chat_message', {
+            username: player.username,
+            message: data.message.trim(),
+            timestamp: new Date().toISOString()
+          });
+        }
+      });
+
+      // Handle disconnection
+      socket.on('disconnect', () => {
+        const player = this.connectedUsers.get(socket.id);
+        
+        if (player) {
+          console.log(`👋 User disconnected: ${player.username}`);
+          
+          // Remove from matchmaking queue
+          this.matchmaking.removeFromQueue(player.userId);
+          
+          // Handle active games
+          this.gameManager.handlePlayerDisconnect(player.userId);
+          
+          // Remove from connected users
+          this.connectedUsers.delete(socket.id);
+        }
+      });
+    });
+  }
+
+  private async handleGameEnd(gameResult: any) {
+    // Broadcast game end to all players in room
+    this.io.to(gameResult.id).emit('game_ended', {
+      result: gameResult.result,
+      winner: gameResult.winner,
+      reason: gameResult.reason,
+      whiteRatingChange: gameResult.whiteRatingChange,
+      blackRatingChange: gameResult.blackRatingChange,
+      gameData: {
+        moves: gameResult.moves,
+        duration: gameResult.duration,
+        finalPosition: gameResult.finalPosition
+      }
+    });
+
+    // Clean up game room
+    this.gameManager.cleanupGame(gameResult.id);
+    
+    console.log(`🏁 Game ended: ${gameResult.id} - Result: ${gameResult.result}`);
+  }
+
+  // Public methods for external access
+  public getConnectedUsersCount(): number {
+    return this.connectedUsers.size;
+  }
+
+  public getActiveGamesCount(): number {
+    return this.gameManager.getActiveGamesCount();
+  }
+
+  public getMatchmakingQueueCount(): number {
+    return this.matchmaking.getQueueSize();
+  }
+}
+
+let webSocketService: WebSocketService;
+
+export const setupWebSocket = (server: HTTPServer): WebSocketService => {
+  if (!webSocketService) {
+    webSocketService = new WebSocketService(server);
+  }
+  return webSocketService;
+};
+
+export const getWebSocketService = (): WebSocketService => {
+  return webSocketService;
+};

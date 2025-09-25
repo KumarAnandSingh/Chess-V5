@@ -1,0 +1,115 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - complementary [ref=e6]:
+    - generic [ref=e7]:
+      - link "Chess Academy" [ref=e9] [cursor=pointer]:
+        - /url: /dashboard
+        - img [ref=e10] [cursor=pointer]
+        - generic [ref=e12] [cursor=pointer]: Chess Academy
+      - navigation [ref=e13]:
+        - link "Dashboard" [ref=e14] [cursor=pointer]:
+          - /url: /dashboard
+          - img
+          - generic [ref=e15] [cursor=pointer]: Dashboard
+        - link "Lessons" [ref=e16] [cursor=pointer]:
+          - /url: /lessons
+          - img
+          - generic [ref=e17] [cursor=pointer]: Lessons
+        - link "Puzzles" [ref=e18] [cursor=pointer]:
+          - /url: /puzzles
+          - img
+          - generic [ref=e19] [cursor=pointer]: Puzzles
+        - link "vs Computer" [ref=e20] [cursor=pointer]:
+          - /url: /play
+          - img
+          - generic [ref=e21] [cursor=pointer]: vs Computer
+        - link "Multiplayer" [ref=e22] [cursor=pointer]:
+          - /url: /multiplayer
+          - img
+          - generic [ref=e23] [cursor=pointer]: Multiplayer
+        - link "Leaderboard" [ref=e24] [cursor=pointer]:
+          - /url: /leaderboard
+          - img
+          - generic [ref=e25] [cursor=pointer]: Leaderboard
+      - generic [ref=e28]:
+        - generic [ref=e29]: Current Rating
+        - generic [ref=e30]: "1200"
+  - main [ref=e32]:
+    - generic [ref=e33]:
+      - generic [ref=e34]:
+        - heading "♟️ Live Multiplayer Chess" [level=1] [ref=e35]
+        - paragraph [ref=e36]: Play real-time chess games with players around the world
+      - generic [ref=e38]:
+        - generic [ref=e39]:
+          - heading "♟️ Live Multiplayer Chess" [level=1] [ref=e40]
+          - paragraph [ref=e41]: Play real-time games against other players online
+        - generic [ref=e45]: Connecting to server...
+        - generic [ref=e46]:
+          - generic [ref=e48]: Choose Time Control
+          - generic [ref=e50]:
+            - generic [ref=e51] [cursor=pointer]:
+              - generic [ref=e52] [cursor=pointer]:
+                - generic [ref=e53] [cursor=pointer]: 1+0
+                - generic [ref=e54] [cursor=pointer]: BULLET
+              - paragraph [ref=e55] [cursor=pointer]: 1 minute games
+            - generic [ref=e56] [cursor=pointer]:
+              - generic [ref=e57] [cursor=pointer]:
+                - generic [ref=e58] [cursor=pointer]: 2+1
+                - generic [ref=e59] [cursor=pointer]: BULLET
+              - paragraph [ref=e60] [cursor=pointer]: 2 min + 1 sec
+            - generic [ref=e61] [cursor=pointer]:
+              - generic [ref=e62] [cursor=pointer]:
+                - generic [ref=e63] [cursor=pointer]: 3+0
+                - generic [ref=e64] [cursor=pointer]: BLITZ
+              - paragraph [ref=e65] [cursor=pointer]: 3 minute games
+            - generic [ref=e66] [cursor=pointer]:
+              - generic [ref=e67] [cursor=pointer]:
+                - generic [ref=e68] [cursor=pointer]: 3+2
+                - generic [ref=e69] [cursor=pointer]: BLITZ
+              - paragraph [ref=e70] [cursor=pointer]: 3 min + 2 sec
+            - generic [ref=e71] [cursor=pointer]:
+              - generic [ref=e72] [cursor=pointer]:
+                - generic [ref=e73] [cursor=pointer]: 5+0
+                - generic [ref=e74] [cursor=pointer]: BLITZ
+              - paragraph [ref=e75] [cursor=pointer]: 5 minute games
+            - generic [ref=e76] [cursor=pointer]:
+              - generic [ref=e77] [cursor=pointer]:
+                - generic [ref=e78] [cursor=pointer]: 5+3
+                - generic [ref=e79] [cursor=pointer]: BLITZ
+              - paragraph [ref=e80] [cursor=pointer]: 5 min + 3 sec
+            - generic [ref=e81] [cursor=pointer]:
+              - generic [ref=e82] [cursor=pointer]:
+                - generic [ref=e83] [cursor=pointer]: 10+0
+                - generic [ref=e84] [cursor=pointer]: RAPID
+              - paragraph [ref=e85] [cursor=pointer]: 10 minute games
+            - generic [ref=e86] [cursor=pointer]:
+              - generic [ref=e87] [cursor=pointer]:
+                - generic [ref=e88] [cursor=pointer]: 15+10
+                - generic [ref=e89] [cursor=pointer]: RAPID
+              - paragraph [ref=e90] [cursor=pointer]: 15 min + 10 sec
+            - generic [ref=e91] [cursor=pointer]:
+              - generic [ref=e92] [cursor=pointer]:
+                - generic [ref=e93] [cursor=pointer]: 30+0
+                - generic [ref=e94] [cursor=pointer]: CLASSICAL
+              - paragraph [ref=e95] [cursor=pointer]: 30 minute games
+        - generic [ref=e96]:
+          - button "Connecting..." [disabled]
+        - generic [ref=e99]:
+          - heading "🔗 Live Online Chess" [level=3] [ref=e100]
+          - paragraph [ref=e101]: Connecting to game server for live matchmaking and real-time chess gameplay.
+      - generic [ref=e103]:
+        - generic [ref=e104]:
+          - generic [ref=e105]: ⚡
+          - heading "Quick Match" [level=3] [ref=e106]
+          - paragraph [ref=e107]: Get matched instantly with players of similar skill level
+        - generic [ref=e108]:
+          - generic [ref=e109]: 🏆
+          - heading "Ranked Games" [level=3] [ref=e110]
+          - paragraph [ref=e111]: Compete in ranked matches to climb the leaderboard
+        - generic [ref=e112]:
+          - generic [ref=e113]: 👥
+          - heading "Private Rooms" [level=3] [ref=e114]
+          - paragraph [ref=e115]: Create custom rooms to play with friends
+```

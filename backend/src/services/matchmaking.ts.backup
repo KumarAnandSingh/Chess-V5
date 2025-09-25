@@ -1,0 +1,243 @@
+import { PlayerSocket, TimeControl } from './websocket';
+
+interface QueueEntry {
+  player: PlayerSocket;
+  timeControl: TimeControl;
+  queueTime: Date;
+  minRating?: number;
+  maxRating?: number;
+}
+
+export class MatchmakingService {
+  private queue: QueueEntry[];
+  private readonly RATING_RANGE_INITIAL = 100; // ±100 rating points initially
+  private readonly RATING_RANGE_EXPANSION = 50; // Expand by 50 every 30 seconds
+  private readonly QUEUE_EXPANSION_INTERVAL = 30000; // 30 seconds
+
+  constructor() {
+    this.queue = [];
+    
+    // Periodically check for matches with expanded rating ranges
+    setInterval(() => {
+      this.expandedMatchmaking();
+    }, this.QUEUE_EXPANSION_INTERVAL);
+  }
+
+  async findMatch(
+    player: PlayerSocket, 
+    timeControl: TimeControl, 
+    minRating?: number, 
+    maxRating?: number
+  ): Promise<PlayerSocket | null> {
+    
+    // Look for existing players in queue with compatible time controls
+    for (let i = 0; i < this.queue.length; i++) {
+      const queueEntry = this.queue[i];
+      
+      // Skip if same player
+      if (queueEntry.player.userId === player.userId) {
+        continue;
+      }
+
+      // Check time control compatibility
+      if (!this.isTimeControlCompatible(timeControl, queueEntry.timeControl)) {
+        continue;
+      }
+
+      // Check rating compatibility
+      if (!this.isRatingCompatible(player, queueEntry, minRating, maxRating)) {
+        continue;
+      }
+
+      // Found a match!
+      const opponent = queueEntry.player;
+      
+      // Remove opponent from queue
+      this.queue.splice(i, 1);
+      
+      console.log(`🎯 Match found: ${player.username} (${player.rating}) vs ${opponent.username} (${opponent.rating})`);
+      
+      return opponent;
+    }
+
+    return null; // No match found
+  }
+
+  addToQueue(player: PlayerSocket, timeControl: TimeControl, minRating?: number, maxRating?: number): void {
+    // Remove player from queue if already present
+    this.removeFromQueue(player.userId);
+
+    // Add to queue
+    const queueEntry: QueueEntry = {
+      player,
+      timeControl,
+      queueTime: new Date(),
+      minRating,
+      maxRating
+    };
+
+    this.queue.push(queueEntry);
+    
+    console.log(`📋 ${player.username} added to matchmaking queue (${this.queue.length} players total)`);
+  }
+
+  removeFromQueue(userId: string): boolean {
+    const initialLength = this.queue.length;
+    this.queue = this.queue.filter(entry => entry.player.userId !== userId);
+    
+    const removed = this.queue.length < initialLength;
+    if (removed) {
+      console.log(`❌ Player removed from matchmaking queue (${this.queue.length} players remaining)`);
+    }
+    
+    return removed;
+  }
+
+  private isTimeControlCompatible(tc1: TimeControl, tc2: TimeControl): boolean {
+    // For now, require exact time control match
+    // In production, you might want more flexible matching
+    return tc1.initial === tc2.initial && 
+           tc1.increment === tc2.increment && 
+           tc1.type === tc2.type;
+  }
+
+  private isRatingCompatible(
+    player: PlayerSocket, 
+    queueEntry: QueueEntry, 
+    playerMinRating?: number, 
+    playerMaxRating?: number
+  ): boolean {
+    const playerRating = player.rating;
+    const opponentRating = queueEntry.player.rating;
+    
+    // Calculate dynamic rating range based on queue time
+    const queueDuration = Date.now() - queueEntry.queueTime.getTime();
+    const expansions = Math.floor(queueDuration / this.QUEUE_EXPANSION_INTERVAL);
+    const dynamicRange = this.RATING_RANGE_INITIAL + (expansions * this.RATING_RANGE_EXPANSION);
+    
+    // Check if opponent is within player's preferred range
+    if (playerMinRating && opponentRating < playerMinRating) return false;
+    if (playerMaxRating && opponentRating > playerMaxRating) return false;
+    
+    // Check if player is within opponent's preferred range
+    if (queueEntry.minRating && playerRating < queueEntry.minRating) return false;
+    if (queueEntry.maxRating && playerRating > queueEntry.maxRating) return false;
+    
+    // Check dynamic rating range
+    const ratingDiff = Math.abs(playerRating - opponentRating);
+    return ratingDiff <= dynamicRange;
+  }
+
+  private expandedMatchmaking(): void {
+    // Try to match players who have been waiting longer with expanded criteria
+    for (let i = 0; i < this.queue.length; i++) {
+      const entry1 = this.queue[i];
+      
+      for (let j = i + 1; j < this.queue.length; j++) {
+        const entry2 = this.queue[j];
+        
+        // Check if these players can be matched with expanded criteria
+        if (this.isTimeControlCompatible(entry1.timeControl, entry2.timeControl)) {
+          // Calculate expanded rating ranges for both players
+          const entry1Duration = Date.now() - entry1.queueTime.getTime();
+          const entry2Duration = Date.now() - entry2.queueTime.getTime();
+          
+          const entry1Expansions = Math.floor(entry1Duration / this.QUEUE_EXPANSION_INTERVAL);
+          const entry2Expansions = Math.floor(entry2Duration / this.QUEUE_EXPANSION_INTERVAL);
+          
+          const entry1Range = this.RATING_RANGE_INITIAL + (entry1Expansions * this.RATING_RANGE_EXPANSION);
+          const entry2Range = this.RATING_RANGE_INITIAL + (entry2Expansions * this.RATING_RANGE_EXPANSION);
+          
+          const ratingDiff = Math.abs(entry1.player.rating - entry2.player.rating);
+          
+          if (ratingDiff <= Math.max(entry1Range, entry2Range)) {
+            console.log(`⏰ Expanded matchmaking found match after ${Math.max(entry1Duration, entry2Duration)}ms wait`);
+            
+            // These players can be matched - they will be picked up in the next match attempt
+            // We don't create the game here, just log that they're compatible
+          }
+        }
+      }
+    }
+  }
+
+  getEstimatedWaitTime(rating: number): number {
+    // Calculate estimated wait time based on queue size and rating distribution
+    const queueSize = this.queue.length;
+    
+    if (queueSize === 0) return 60; // 1 minute base estimate
+    
+    // Count players within rating range
+    const compatiblePlayers = this.queue.filter(entry => {
+      const ratingDiff = Math.abs(entry.player.rating - rating);
+      return ratingDiff <= this.RATING_RANGE_INITIAL;
+    }).length;
+    
+    // Estimate based on compatible players
+    if (compatiblePlayers > 0) {
+      return 15; // 15 seconds if compatible players exist
+    } else if (queueSize < 5) {
+      return 120; // 2 minutes for small queue
+    } else {
+      return 60; // 1 minute for larger queue
+    }
+  }
+
+  getQueueSize(): number {
+    return this.queue.length;
+  }
+
+  getQueueStats(): {
+    totalPlayers: number;
+    byTimeControl: Record<string, number>;
+    averageWaitTime: number;
+    ratingDistribution: { min: number; max: number; average: number };
+  } {
+    const totalPlayers = this.queue.length;
+    
+    if (totalPlayers === 0) {
+      return {
+        totalPlayers: 0,
+        byTimeControl: {},
+        averageWaitTime: 0,
+        ratingDistribution: { min: 0, max: 0, average: 0 }
+      };
+    }
+
+    // Group by time control
+    const byTimeControl: Record<string, number> = {};
+    let totalWaitTime = 0;
+    let totalRating = 0;
+    let minRating = Infinity;
+    let maxRating = -Infinity;
+
+    this.queue.forEach(entry => {
+      const tcKey = `${entry.timeControl.initial}+${entry.timeControl.increment}`;
+      byTimeControl[tcKey] = (byTimeControl[tcKey] || 0) + 1;
+      
+      totalWaitTime += Date.now() - entry.queueTime.getTime();
+      totalRating += entry.player.rating;
+      minRating = Math.min(minRating, entry.player.rating);
+      maxRating = Math.max(maxRating, entry.player.rating);
+    });
+
+    return {
+      totalPlayers,
+      byTimeControl,
+      averageWaitTime: Math.round(totalWaitTime / totalPlayers / 1000), // in seconds
+      ratingDistribution: {
+        min: minRating === Infinity ? 0 : minRating,
+        max: maxRating === -Infinity ? 0 : maxRating,
+        average: Math.round(totalRating / totalPlayers)
+      }
+    };
+  }
+
+  // Get players currently in queue (for admin/debugging)
+  getQueueSnapshot(): QueueEntry[] {
+    return this.queue.map(entry => ({
+      ...entry,
+      waitTime: Date.now() - entry.queueTime.getTime()
+    }));
+  }
+}

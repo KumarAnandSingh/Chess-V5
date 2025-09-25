@@ -1,0 +1,477 @@
+/**
+ * Premium Chess Academy Design Tokens
+ * Based on Figma Auto Layout, Variables, and Component Properties
+ * Designed for commercial-grade premium UI/UX
+ */
+
+/* ===========================================
+   🎨 ENHANCED COLOR SYSTEM - Chess.com Inspired
+   =========================================== */
+
+:root {
+  /* DARK THEME (Primary) - Professional Chess Platform Colors */
+  --color-bg-base: #0D1117;
+  --color-bg-alt: #161B22;
+  --color-surface: #21262D;
+  --color-surface-elevated: #2D333B;
+  --color-surface-overlay: #373E47;
+  --color-surface-glass: rgba(45, 51, 59, 0.8);
+  --color-surface-highlight: rgba(56, 139, 253, 0.08);
+  
+  /* TEXT HIERARCHY - Enhanced Readability */
+  --color-text-primary: #F0F6FC;
+  --color-text-secondary: #7D8590;
+  --color-text-muted: #656D76;
+  --color-text-disabled: #484F58;
+  --color-text-inverse: #24292F;
+  --color-text-brand: #58A6FF;
+  --color-text-success: #3FB950;
+  --color-text-warning: #D29922;
+  --color-text-danger: #F85149;
+  
+  /* CHESS.COM INSPIRED ACCENT SYSTEM */
+  --color-accent-primary: #769656;
+  --color-accent-primary-hover: #81A263;
+  --color-accent-primary-pressed: #5D7A42;
+  --color-accent-primary-subtle: rgba(118, 150, 86, 0.15);
+  --color-accent-primary-contrast: #FFFFFF;
+  
+  /* SECONDARY ACCENT - Royal Purple */
+  --color-accent-secondary: #CC9543;
+  --color-accent-secondary-hover: #D4A052;
+  --color-accent-secondary-pressed: #B8843A;
+  --color-accent-secondary-subtle: rgba(204, 149, 67, 0.15);
+  
+  /* BLUE ACCENT - For Interactive Elements */
+  --color-accent-blue: #58A6FF;
+  --color-accent-blue-hover: #79B8FF;
+  --color-accent-blue-pressed: #388BFD;
+  --color-accent-blue-subtle: rgba(88, 166, 255, 0.15);
+  
+  /* ENHANCED FOCUS & ACCESSIBILITY */
+  --color-focus-ring: #58A6FF;
+  --color-focus-ring-offset: rgba(88, 166, 255, 0.20);
+  --color-focus-ring-danger: #F85149;
+  --color-focus-ring-success: #3FB950;
+  --color-focus-ring-width: 2px;
+  --color-focus-ring-offset-width: 2px;
+  
+  /* PROFESSIONAL SEMANTIC COLORS */
+  --color-success: #3FB950;
+  --color-success-hover: #56D364;
+  --color-success-subtle: rgba(63, 185, 80, 0.15);
+  --color-warning: #D29922;
+  --color-warning-hover: #E2A336;
+  --color-warning-subtle: rgba(210, 153, 34, 0.15);
+  --color-danger: #F85149;
+  --color-danger-hover: #FF6B6B;
+  --color-danger-subtle: rgba(248, 81, 73, 0.15);
+  --color-info: #58A6FF;
+  --color-info-hover: #79B8FF;
+  --color-info-subtle: rgba(88, 166, 255, 0.15);
+  
+  /* ENHANCED CTA SYSTEM */
+  --color-cta-primary: #769656;
+  --color-cta-primary-hover: #81A263;
+  --color-cta-primary-pressed: #5D7A42;
+  --color-cta-secondary: #CC9543;
+  --color-cta-secondary-hover: #D4A052;
+  --color-cta-secondary-pressed: #B8843A;
+  --color-cta-danger: #F85149;
+  --color-cta-danger-hover: #FF6B6B;
+  
+  /* PROFESSIONAL CHESS BOARD COLORS */
+  --color-board-light: #EBECD0;
+  --color-board-dark: #739552;
+  --color-board-light-hover: #F5F682;
+  --color-board-dark-hover: #BBCB44;
+  --color-board-highlight: rgba(255, 255, 0, 0.6);
+  --color-board-selected: rgba(20, 85, 30, 0.5);
+  --color-board-legal-move: rgba(63, 185, 80, 0.4);
+  --color-board-capture: rgba(248, 81, 73, 0.6);
+  --color-board-check: rgba(255, 0, 0, 0.7);
+  --color-board-last-move: rgba(255, 255, 0, 0.3);
+  --color-board-premium-hint: rgba(204, 149, 67, 0.4);
+  
+  /* ENHANCED BORDER SYSTEM */
+  --color-border-subtle: #30363D;
+  --color-border-default: #373E47;
+  --color-border-strong: #484F58;
+  --color-border-accent: var(--color-accent-primary);
+  --color-border-success: var(--color-success);
+  --color-border-warning: var(--color-warning);
+  --color-border-danger: var(--color-danger);
+  --color-border-interactive: rgba(88, 166, 255, 0.3);
+  
+  /* PROFESSIONAL ELEVATION SYSTEM */
+  --elevation-subtle: 0 1px 3px rgba(1, 4, 9, 0.12);
+  --elevation-card: 0 3px 12px rgba(1, 4, 9, 0.18);
+  --elevation-elevated: 0 6px 20px rgba(1, 4, 9, 0.25);
+  --elevation-dropdown: 0 12px 28px rgba(1, 4, 9, 0.35);
+  --elevation-modal: 0 16px 40px rgba(1, 4, 9, 0.45);
+  --elevation-tooltip: 0 8px 24px rgba(1, 4, 9, 0.3);
+  
+  /* GLOW EFFECTS */
+  --glow-accent-primary: 0 0 20px rgba(118, 150, 86, 0.3);
+  --glow-accent-secondary: 0 0 20px rgba(204, 149, 67, 0.3);
+  --glow-success: 0 0 20px rgba(63, 185, 80, 0.3);
+  --glow-danger: 0 0 20px rgba(248, 81, 73, 0.3);
+  
+  /* LIGHT THEME TOKENS - Bug Report Specified Colors */
+  --color-bg-base-light: #FFFFFF;
+  --color-bg-alt-light: #F8FAFC;
+  --color-surface-light: #F1F5F9;
+  --color-surface-elevated-light: #FFFFFF;
+  --color-surface-overlay-light: #FFFFFF;
+  --color-text-primary-light: #0B1726;
+  --color-text-secondary-light: #0F1724;
+  --color-text-muted-light: #0F1724;
+  --color-text-disabled-light: #94A3B8;
+  --color-text-inverse-light: #FFFFFF;
+  
+  /* LIGHT THEME BORDERS */
+  --color-border-subtle-light: rgba(15, 23, 42, 0.1);
+  --color-border-default-light: rgba(15, 23, 42, 0.2);
+  --color-border-strong-light: rgba(15, 23, 42, 0.3);
+  
+  /* LIGHT THEME CHESS BOARD */
+  --color-board-light-light: #F1F5F9;
+  --color-board-dark-light: #64748B;
+}
+
+/* Light theme activation */
+[data-theme="light"] {
+  --color-bg-base: var(--color-bg-base-light);
+  --color-bg-alt: var(--color-bg-alt-light);
+  --color-surface: var(--color-surface-light);
+  --color-surface-elevated: var(--color-surface-elevated-light);
+  --color-surface-overlay: var(--color-surface-overlay-light);
+  --color-text-primary: var(--color-text-primary-light);
+  --color-text-secondary: var(--color-text-secondary-light);
+  --color-text-muted: var(--color-text-muted-light);
+  --color-text-disabled: var(--color-text-disabled-light);
+  --color-text-inverse: var(--color-text-inverse-light);
+  --color-border-subtle: var(--color-border-subtle-light);
+  --color-border-default: var(--color-border-default-light);
+  --color-border-strong: var(--color-border-strong-light);
+  
+  /* Light theme chess board colors */
+  --color-board-light: var(--color-board-light-light);
+  --color-board-dark: var(--color-board-dark-light);
+  
+  /* Light theme shadows */
+  --elevation-subtle: 0 1px 3px rgba(15, 23, 42, 0.1);
+  --elevation-card: 0 2px 10px rgba(15, 23, 42, 0.08);
+  --elevation-dropdown: 0 4px 16px rgba(15, 23, 42, 0.12);
+  --elevation-modal: 0 8px 32px rgba(15, 23, 42, 0.15);
+}
+
+/* ===========================================
+   📐 SPACING SCALE (Consistent 8px baseline)
+   =========================================== */
+
+:root {
+  --space-0: 0;
+  --space-1: 4px;   /* xs */
+  --space-2: 8px;   /* sm */
+  --space-3: 12px;  /* md */
+  --space-4: 16px;  /* lg */
+  --space-6: 24px;  /* xl */
+  --space-8: 32px;  /* 2xl */
+  --space-12: 48px; /* 3xl */
+  --space-16: 64px; /* 4xl */
+  --space-20: 80px; /* 5xl */
+  --space-24: 96px; /* 6xl */
+}
+
+/* ===========================================
+   🔄 RADIUS TOKENS
+   =========================================== */
+
+:root {
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+}
+
+/* ===========================================
+   🎯 TYPOGRAPHY SCALE
+   =========================================== */
+
+:root {
+  /* ENHANCED FONT SYSTEM */
+  --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-secondary: 'Manrope', system-ui, sans-serif;
+  --font-display: 'Inter', system-ui, sans-serif;
+  --font-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  
+  /* FONT WEIGHTS */
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+  
+  /* PROFESSIONAL TYPE SCALE */
+  --text-xs: 0.75rem;     /* 12px - small labels */
+  --text-sm: 0.875rem;    /* 14px - secondary text */
+  --text-base: 1rem;      /* 16px - body text */
+  --text-lg: 1.125rem;    /* 18px - large body */
+  --text-xl: 1.25rem;     /* 20px - subtitle */
+  --text-2xl: 1.5rem;     /* 24px - h3 */
+  --text-3xl: 1.875rem;   /* 30px - h2 */
+  --text-4xl: 2.25rem;    /* 36px - h1 */
+  --text-5xl: 3rem;       /* 48px - display */
+  --text-6xl: 3.75rem;    /* 60px - hero */
+  --text-7xl: 4.5rem;     /* 72px - mega display */
+  
+  /* ENHANCED LINE HEIGHTS */
+  --leading-none: 1;
+  --leading-tight: 1.25;
+  --leading-snug: 1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+  --leading-loose: 2;
+  
+  /* RESPONSIVE LINE HEIGHTS */
+  --leading-display: 1.1;  /* For large headings */
+  --leading-heading: 1.3;  /* For section headings */
+  --leading-body: 1.6;     /* For body text */
+  --leading-caption: 1.4;  /* For small text */
+  
+  /* PROFESSIONAL LETTER SPACING */
+  --tracking-tighter: -0.025em;
+  --tracking-tight: -0.01em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.01em;
+  --tracking-wider: 0.02em;
+  --tracking-widest: 0.05em;
+  
+  /* CONTEXTUAL TRACKING */
+  --tracking-display: -0.02em;  /* For large headings */
+  --tracking-heading: -0.01em;  /* For section headings */
+  --tracking-caps: 0.05em;      /* For uppercase text */
+}
+
+/* ===========================================
+   📱 GRID SYSTEM
+   =========================================== */
+
+:root {
+  /* Desktop Grid (12-column) */
+  --grid-desktop-columns: 12;
+  --grid-desktop-margin: 72px;
+  --grid-desktop-gutter: 24px;
+  --grid-desktop-max-width: 1440px;
+  
+  /* Mobile Grid (4-column) */
+  --grid-mobile-columns: 4;
+  --grid-mobile-margin: 16px;
+  --grid-mobile-gutter: 16px;
+  --grid-mobile-max-width: 390px;
+  
+  /* Baseline Grid */
+  --baseline: 8px;
+}
+
+/* ===========================================
+   ⚡ MOTION TOKENS
+   =========================================== */
+
+:root {
+  /* EASING CURVES */
+  --ease-out-quad: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-out-cubic: cubic-bezier(0.215, 0.61, 0.355, 1);
+  --ease-premium: cubic-bezier(0.2, 0.6, 0.2, 1);
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  
+  /* DURATIONS */
+  --duration-instant: 0ms;
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --duration-slower: 400ms;
+  --duration-slowest: 600ms;
+}
+
+/* ===========================================
+   🎪 COMPONENT TOKENS
+   =========================================== */
+
+:root {
+  /* ENHANCED BUTTON SYSTEM */
+  --button-xs-height: 28px;
+  --button-sm-height: 32px;
+  --button-md-height: 40px;
+  --button-lg-height: 48px;
+  --button-xl-height: 56px;
+  --button-xxl-height: 64px;
+  
+  /* BUTTON PADDINGS */
+  --button-xs-padding: var(--space-2) var(--space-3);
+  --button-sm-padding: var(--space-2) var(--space-4);
+  --button-md-padding: var(--space-3) var(--space-6);
+  --button-lg-padding: var(--space-4) var(--space-8);
+  --button-xl-padding: var(--space-6) var(--space-12);
+  
+  /* INPUT SYSTEM */
+  --input-xs-height: 28px;
+  --input-sm-height: 32px;
+  --input-md-height: 40px;
+  --input-lg-height: 48px;
+  --input-xl-height: 56px;
+  
+  /* CARD SYSTEM */
+  --card-padding-xs: var(--space-2) var(--space-3);
+  --card-padding-sm: var(--space-3) var(--space-4);
+  --card-padding-md: var(--space-4) var(--space-6);
+  --card-padding-lg: var(--space-6) var(--space-8);
+  --card-padding-xl: var(--space-8) var(--space-12);
+  
+  /* SIDEBAR DIMENSIONS */
+  --sidebar-width-collapsed: 64px;
+  --sidebar-width-expanded: 280px;
+  --sidebar-header-height: 72px;
+  
+  /* CHESS BOARD DIMENSIONS */
+  --chess-board-size-sm: 320px;
+  --chess-board-size-md: 480px;
+  --chess-board-size-lg: 640px;
+  --chess-board-size-xl: 800px;
+  
+  /* AVATAR SIZES */
+  --avatar-xs: 24px;
+  --avatar-sm: 32px;
+  --avatar-md: 40px;
+  --avatar-lg: 48px;
+  --avatar-xl: 64px;
+  --avatar-xxl: 80px;
+  
+  /* BADGE DIMENSIONS */
+  --badge-height: 20px;
+  --badge-padding: var(--space-1) var(--space-2);
+  --badge-lg-height: 24px;
+  --badge-lg-padding: var(--space-2) var(--space-3);
+}
+
+/* ===========================================
+   ♿ ACCESSIBILITY
+   =========================================== */
+
+:root {
+  /* ENHANCED ACCESSIBILITY */
+  --focus-ring: 0 0 0 var(--color-focus-ring-width) var(--color-focus-ring);
+  --focus-ring-offset: var(--color-focus-ring-offset-width);
+  --focus-ring-inset: inset 0 0 0 var(--color-focus-ring-width) var(--color-focus-ring);
+  
+  /* TOUCH TARGETS */
+  --touch-target-min: 44px;
+  --touch-target-comfortable: 48px;
+  
+  /* HIGH CONTRAST MODE */
+  --high-contrast-border: 2px solid;
+  --high-contrast-outline: 3px solid;
+  
+  /* REDUCED MOTION */
+  --motion-duration-none: 0ms;
+  --motion-duration-short: 150ms;
+  --motion-duration-medium: 300ms;
+  --motion-duration-long: 500ms;
+  
+  /* PROFESSIONAL TRANSITIONS */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-medium: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-bounce: 400ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  
+  /* LAYOUT BREAKPOINTS */
+  --breakpoint-xs: 475px;
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+  
+  /* Z-INDEX SCALE */
+  --z-base: 0;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-fixed: 300;
+  --z-modal-backdrop: 400;
+  --z-modal: 500;
+  --z-popover: 600;
+  --z-tooltip: 700;
+  --z-toast: 800;
+  --z-maximum: 9999;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-normal: 0ms;
+    --duration-slow: 0ms;
+    --duration-slower: 0ms;
+    --duration-slowest: 0ms;
+  }
+}
+
+@media (prefers-contrast: high) {
+  :root {
+    --color-border-default: var(--color-text-primary);
+    --color-border-strong: var(--color-text-primary);
+  }
+}
+
+/* ===========================================
+   📐 BASE STYLES
+   =========================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  line-height: var(--leading-normal);
+}
+
+body {
+  font-family: var(--font-primary);
+  font-weight: 400;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-base) !important;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+  background-color: var(--color-bg-base) !important;
+  color: var(--color-text-primary) !important;
+}
+
+/* Force dark theme on app container */
+.app-container {
+  background-color: var(--color-bg-base) !important;
+  color: var(--color-text-primary) !important;
+  min-height: 100vh;
+}
+
+/* Focus management - Bug Report Specified */
+:focus {
+  outline: 3px solid #7AA2FF;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(122,162,255,0.12);
+}
+
+:focus-visible {
+  outline: 3px solid #7AA2FF;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(122,162,255,0.12);
+}

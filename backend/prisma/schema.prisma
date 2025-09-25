@@ -1,0 +1,746 @@
+// Chess Academy Database Schema
+// Comprehensive schema for interactive chess learning platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// USER MANAGEMENT
+// =============================================================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  username      String    @unique
+  displayName   String
+  passwordHash  String? // Made optional for OAuth users
+  avatar        String?
+  emailVerified Boolean   @default(false)
+  provider      String    @default("local") // local, google, facebook, etc.
+  providerId    String? // OAuth provider ID
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastLoginAt   DateTime?
+
+  // User preferences
+  preferences UserPreferences?
+
+  // Subscription
+  subscription UserSubscription?
+
+  // Learning progress
+  learningPath   LearningPath?
+  lessonProgress LessonProgress[]
+  puzzleProgress PuzzleProgress[]
+  gameHistory    Game[]
+
+  // Multiplayer Chess
+  multiplayerGames    MultiplayerGame[] @relation("GamePlayer")
+  whiteGames          MultiplayerGame[] @relation("WhitePlayer")
+  blackGames          MultiplayerGame[] @relation("BlackPlayer")
+  matchmakingQueue    MatchmakingQueue?
+  gameInvitesSent     GameInvite[]      @relation("InviteSender")
+  gameInvitesReceived GameInvite[]      @relation("InviteReceiver")
+  spectatingGames     GameSpectator[]
+  ratingHistory       RatingHistory[]
+  gameChatMessages    GameChatMessage[]
+
+  // Gamification
+  userStats      UserStats?
+  achievements   UserAchievement[]
+  xpTransactions XPTransaction[]
+  streakData     StreakData?
+
+  // Social
+  sentFriendships     Friendship[] @relation("SentFriendships")
+  receivedFriendships Friendship[] @relation("ReceivedFriendships")
+
+  // Security
+  sessions       Session[]
+  passwordResets PasswordReset[]
+
+  // Phase 0 Features
+  calibration          UserCalibration?
+  dailyPlans           DailyPlan[]
+  botGames             BotGame[]
+  analyticsEvents      AnalyticsEvent[]
+  User_GameChatMessage User_GameChatMessage[]
+
+  @@unique([provider, providerId])
+  @@map("users")
+}
+
+model UserPreferences {
+  id                   String  @id @default(cuid())
+  userId               String  @unique
+  theme                String  @default("light")
+  language             String  @default("en")
+  timezone             String  @default("UTC")
+  boardTheme           String  @default("classic")
+  pieceSet             String  @default("classic")
+  soundEnabled         Boolean @default(true)
+  musicEnabled         Boolean @default(true)
+  notificationsEnabled Boolean @default(true)
+  emailNotifications   Boolean @default(true)
+  pushNotifications    Boolean @default(true)
+  profileVisible       Boolean @default(true)
+  statsVisible         Boolean @default(true)
+  allowFriendRequests  Boolean @default(true)
+  showOnlineStatus     Boolean @default(true)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+model UserSubscription {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  tier                 String   @default("free") // free, premium, pro
+  status               String   @default("active") // active, cancelled, past_due, unpaid
+  currentPeriodStart   DateTime @default(now())
+  currentPeriodEnd     DateTime
+  cancelAtPeriodEnd    Boolean  @default(false)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_subscriptions")
+}
+
+// =============================================================================
+// AUTHENTICATION & SECURITY
+// =============================================================================
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  token        String   @unique
+  refreshToken String   @unique
+  expiresAt    DateTime
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+  lastUsedAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  usedAt    DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_resets")
+}
+
+// =============================================================================
+// LEARNING CONTENT
+// =============================================================================
+
+model Course {
+  id             String   @id @default(cuid())
+  title          String
+  description    String
+  difficulty     String // beginner, intermediate, advanced
+  totalLessons   Int      @default(0)
+  totalXP        Int      @default(0)
+  estimatedHours Int      @default(0)
+  isPublished    Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  modules Module[]
+
+  @@map("courses")
+}
+
+model Module {
+  id             String   @id @default(cuid())
+  courseId       String
+  title          String
+  description    String
+  difficulty     String // beginner, intermediate, advanced
+  totalLessons   Int      @default(0)
+  totalXP        Int      @default(0)
+  estimatedHours Int      @default(0)
+  order          Int
+  icon           String?
+  color          String?
+  isUnlocked     Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  course  Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+
+  @@map("modules")
+}
+
+model Lesson {
+  id                String   @id @default(cuid())
+  moduleId          String
+  title             String
+  description       String
+  difficulty        String // beginner, intermediate, advanced
+  estimatedDuration Int // minutes
+  xpReward          Int      @default(0)
+  order             Int
+  isUnlocked        Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  module        Module               @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  content       LessonContent[]
+  progress      LessonProgress[]
+  prerequisites LessonPrerequisite[] @relation("Lesson")
+  dependents    LessonPrerequisite[] @relation("Prerequisite")
+
+  @@map("lessons")
+}
+
+model LessonPrerequisite {
+  id             String @id @default(cuid())
+  lessonId       String
+  prerequisiteId String
+
+  lesson       Lesson @relation("Lesson", fields: [lessonId], references: [id], onDelete: Cascade)
+  prerequisite Lesson @relation("Prerequisite", fields: [prerequisiteId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, prerequisiteId])
+  @@map("lesson_prerequisites")
+}
+
+model LessonContent {
+  id        String   @id @default(cuid())
+  lessonId  String
+  type      String // theory, puzzle, practice, quiz, story
+  title     String
+  content   Json // Flexible JSON content
+  order     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@map("lesson_content")
+}
+
+// =============================================================================
+// CHESS PUZZLES & GAMES
+// =============================================================================
+
+model ChessPuzzle {
+  id          String   @id @default(cuid())
+  title       String?
+  description String?
+  fen         String // Starting position
+  solution    Json // Array of moves in JSON
+  theme       String // Comma-separated tactics themes
+  difficulty  Int      @default(1) // 1-5 scale
+  rating      Int?
+  tags        String // Comma-separated tags
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  progress PuzzleProgress[]
+
+  @@map("chess_puzzles")
+}
+
+model Game {
+  id            String   @id @default(cuid())
+  userId        String
+  type          String // lesson, puzzle, practice, analysis
+  startPosition String // FEN
+  moves         Json // Array of moves
+  currentFen    String
+  status        String // playing, completed, abandoned
+  result        String? // win, loss, draw, abandoned
+  timeSpent     Int      @default(0) // seconds
+  hintsUsed     Int      @default(0)
+  mistakes      Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("games")
+}
+
+// =============================================================================
+// LEARNING PROGRESS
+// =============================================================================
+
+model LearningPath {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  currentLessonId  String?
+  totalXP          Int      @default(0)
+  currentLevel     Int      @default(1)
+  streak           Int      @default(0)
+  longestStreak    Int      @default(0)
+  lastActivity     DateTime @default(now())
+  dailyGoalMinutes Int      @default(30)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("learning_paths")
+}
+
+model LessonProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  lessonId    String
+  status      String    @default("locked") // locked, available, current, completed
+  completedAt DateTime?
+  attempts    Int       @default(0)
+  bestScore   Int       @default(0)
+  timeSpent   Int       @default(0) // seconds
+  hintsUsed   Int       @default(0)
+  mistakes    Int       @default(0)
+  xpEarned    Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("lesson_progress")
+}
+
+model PuzzleProgress {
+  id        String    @id @default(cuid())
+  userId    String
+  puzzleId  String
+  solved    Boolean   @default(false)
+  attempts  Int       @default(0)
+  bestTime  Int? // seconds
+  hintsUsed Int       @default(0)
+  solvedAt  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  puzzle ChessPuzzle @relation(fields: [puzzleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, puzzleId])
+  @@map("puzzle_progress")
+}
+
+// =============================================================================
+// GAMIFICATION
+// =============================================================================
+
+model UserStats {
+  id               String @id @default(cuid())
+  userId           String @unique
+  totalXP          Int    @default(0)
+  currentLevel     Int    @default(1)
+  levelProgress    Int    @default(0) // 0-100 percentage
+  lessonsCompleted Int    @default(0)
+  puzzlesSolved    Int    @default(0)
+  currentStreak    Int    @default(0)
+  longestStreak    Int    @default(0)
+  totalTimeSpent   Int    @default(0) // minutes
+  averageAccuracy  Float  @default(0.0)
+
+  // Chess Rating System
+  blitzRating     Int @default(1200)
+  rapidRating     Int @default(1200)
+  classicalRating Int @default(1200)
+  puzzleRating    Int @default(1200)
+
+  // Game Statistics
+  totalGamesPlayed Int   @default(0)
+  gamesWon         Int   @default(0)
+  gamesLost        Int   @default(0)
+  gamesDrawn       Int   @default(0)
+  winRate          Float @default(0.0)
+
+  rating       Int      @default(800)
+  rank         Int?
+  lastActivity DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_stats")
+}
+
+model Achievement {
+  id           String   @id @default(cuid())
+  title        String
+  description  String
+  type         String // lesson, puzzle, streak, skill, social, milestone
+  rarity       String // common, uncommon, rare, epic, legendary
+  icon         String
+  xpReward     Int      @default(0)
+  requirements Json // Achievement requirements in JSON
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  userAchievements UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id               String   @id @default(cuid())
+  userId           String
+  achievementId    String
+  unlockedAt       DateTime @default(now())
+  progress         Int      @default(0) // 0-100 percentage
+  xpEarned         Int      @default(0)
+  notificationSeen Boolean  @default(false)
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+model XPTransaction {
+  id        String   @id @default(cuid())
+  userId    String
+  amount    Int
+  reason    String
+  source    String // lesson, puzzle, achievement, streak, bonus
+  sourceId  String?
+  timestamp DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("xp_transactions")
+}
+
+model StreakData {
+  id                     String   @id @default(cuid())
+  userId                 String   @unique
+  currentStreak          Int      @default(0)
+  longestStreak          Int      @default(0)
+  lastActivityDate       DateTime @default(now())
+  streakFreezesUsed      Int      @default(0)
+  streakFreezesAvailable Int      @default(0)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("streak_data")
+}
+
+// =============================================================================
+// SOCIAL FEATURES
+// =============================================================================
+
+model Friendship {
+  id         String    @id @default(cuid())
+  userId     String
+  friendId   String
+  status     String    @default("pending") // pending, accepted, blocked
+  createdAt  DateTime  @default(now())
+  acceptedAt DateTime?
+
+  user   User @relation("SentFriendships", fields: [userId], references: [id], onDelete: Cascade)
+  friend User @relation("ReceivedFriendships", fields: [friendId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, friendId])
+  @@map("friendships")
+}
+
+// =============================================================================
+// PHASE 0 SPECIFIC - CALIBRATION & DAILY PLANS & BOT GAMES
+// =============================================================================
+
+model UserCalibration {
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  position       Int // 1-12 for the 12-position assessment
+  fen            String // FEN position for the test
+  userMove       String? // User's chosen move
+  correctMove    String // Correct/best move
+  timeSpent      Int       @default(0) // seconds spent on this position
+  isCorrect      Boolean   @default(false)
+  ratingEstimate Int? // Estimated rating after this position
+  tacticsRating  Int? // Final tactics rating after all 12 positions
+  weakMotifs     Json? // Array of weak tactical motifs identified
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_calibrations")
+}
+
+model DailyPlan {
+  id               String    @id @default(cuid())
+  userId           String
+  date             DateTime  @default(now()) // Date for this plan
+  puzzlesTarget    Int       @default(3)
+  puzzlesCompleted Int       @default(0)
+  lessonsTarget    Int       @default(1)
+  lessonsCompleted Int       @default(0)
+  gamesTarget      Int       @default(1)
+  gamesCompleted   Int       @default(0)
+  streakActive     Boolean   @default(false)
+  xpEarned         Int       @default(0)
+  completedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@map("daily_plans")
+}
+
+model BotGame {
+  id           String    @id @default(cuid())
+  userId       String
+  botLevel     Int // 1-10 difficulty level
+  botName      String // Name of the bot (Pawn, Knight, etc.)
+  userColor    String    @default("white") // white or black
+  startingFen  String    @default("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+  moves        Json // Array of moves in the game
+  currentFen   String // Current position
+  gameStatus   String    @default("playing") // playing, completed, abandoned
+  gameResult   String? // win, loss, draw
+  pgn          String? // Full PGN of the game
+  timeSpent    Int       @default(0) // Total time in seconds
+  movesCount   Int       @default(0)
+  keyMoments   Json? // Array of 3 key moments with analysis
+  analysisData Json? // Stockfish analysis data
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("bot_games")
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  userId    String? // Can be null for anonymous events
+  sessionId String?
+  eventType String // dailyplan_view, dailyplan_complete, puzzle_start, puzzle_success, puzzle_fail, askcoach_tier1, askcoach_tier2, game_end, review_view
+  eventData Json? // Additional event-specific data
+  timestamp DateTime @default(now())
+  ipAddress String?
+  userAgent String?
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([eventType, timestamp])
+  @@index([userId, timestamp])
+  @@map("analytics_events")
+}
+
+// =============================================================================
+// SYSTEM DATA
+// =============================================================================
+
+model SystemSettings {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("system_settings")
+}
+
+// =============================================================================
+// MULTIPLAYER CHESS SYSTEM
+// =============================================================================
+
+model MultiplayerGame {
+  id            String @id @default(cuid())
+  gameId        String @unique // Short game ID for public display (e.g., "abc123")
+  whitePlayerId String
+  blackPlayerId String
+
+  // Game Configuration
+  timeControl String // "3+2", "10+0", "30+0" etc.
+  rated       Boolean @default(true)
+  variant     String  @default("standard") // standard, chess960, king-of-the-hill, etc.
+
+  // Game State
+  startingFen String  @default("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+  currentFen  String  @default("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+  moves       Json    @default("[]") // Array of moves in algebraic notation
+  pgn         String? // Complete PGN of the game
+  moveCount   Int     @default(0)
+
+  // Game Status
+  status      String  @default("waiting") // waiting, active, completed, aborted, timeout
+  result      String? // "1-0", "0-1", "1/2-1/2"
+  termination String? // checkmate, resign, timeout, draw, stalemate, abandonment
+  winner      String? // "white", "black", "draw"
+
+  // Time Management
+  whiteTimeLeft  Int // Milliseconds remaining
+  blackTimeLeft  Int // Milliseconds remaining
+  whiteIncrement Int       @default(0) // Increment in seconds
+  blackIncrement Int       @default(0) // Increment in seconds
+  lastMoveTime   DateTime?
+
+  // Rating Changes
+  whiteRatingBefore Int?
+  blackRatingBefore Int?
+  whiteRatingAfter  Int?
+  blackRatingAfter  Int?
+  ratingChange      Int?
+
+  // Draw Management
+  drawOfferedBy String? // "white", "black"
+  drawOfferMove Int? // Move number when draw was offered
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  whitePlayer  User              @relation("WhitePlayer", fields: [whitePlayerId], references: [id])
+  blackPlayer  User              @relation("BlackPlayer", fields: [blackPlayerId], references: [id])
+  players      User[]            @relation("GamePlayer")
+  spectators   GameSpectator[]
+  chatMessages GameChatMessage[]
+
+  @@index([status, createdAt])
+  @@index([whitePlayerId, completedAt])
+  @@index([blackPlayerId, completedAt])
+  @@map("multiplayer_games")
+}
+
+model MatchmakingQueue {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  timeControl String // "blitz", "rapid", "classical"
+  ratingRange Int      @default(200) // +/- rating range for matchmaking
+  seeking     Boolean  @default(true)
+  joinedAt    DateTime @default(now())
+  lastUpdated DateTime @updatedAt
+
+  // Preferences
+  rated   Boolean @default(true)
+  color   String? // "white", "black", "random" - preferred color
+  variant String  @default("standard")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([timeControl, seeking, joinedAt])
+  @@map("matchmaking_queue")
+}
+
+model GameInvite {
+  id          String    @id @default(cuid())
+  fromUserId  String
+  toUserId    String
+  timeControl String
+  rated       Boolean   @default(true)
+  color       String? // Preferred color for sender ("white", "black", "random")
+  variant     String    @default("standard")
+  message     String? // Optional invitation message
+  status      String    @default("pending") // pending, accepted, declined, cancelled, expired
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+  respondedAt DateTime?
+
+  sender   User @relation("InviteSender", fields: [fromUserId], references: [id], onDelete: Cascade)
+  receiver User @relation("InviteReceiver", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@unique([fromUserId, toUserId, createdAt])
+  @@index([toUserId, status])
+  @@map("game_invites")
+}
+
+model GameSpectator {
+  id       String    @id @default(cuid())
+  gameId   String
+  userId   String
+  joinedAt DateTime  @default(now())
+  leftAt   DateTime?
+  isActive Boolean   @default(true)
+
+  game MultiplayerGame @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, userId])
+  @@map("game_spectators")
+}
+
+model GameChatMessage {
+  id          String   @id @default(cuid())
+  gameId      String
+  userId      String? // Can be null for system messages
+  message     String
+  messageType String   @default("chat") // chat, system, draw_offer, resignation
+  timestamp   DateTime @default(now())
+
+  game                 MultiplayerGame        @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user                 User?                  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  User_GameChatMessage User_GameChatMessage[]
+
+  @@index([gameId, timestamp])
+  @@map("game_chat_messages")
+}
+
+model RatingHistory {
+  id             String   @id @default(cuid())
+  userId         String
+  gameId         String? // Null for initial ratings or manual adjustments
+  ratingType     String // "blitz", "rapid", "classical", "puzzle"
+  oldRating      Int
+  newRating      Int
+  ratingChange   Int // Can be positive or negative
+  reason         String // "game_result", "initial", "adjustment"
+  kFactor        Int? // K-factor used in ELO calculation
+  opponentRating Int? // Rating of opponent (if applicable)
+  gameResult     String? // "win", "loss", "draw"
+  timestamp      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, ratingType, timestamp])
+  @@map("rating_history")
+}
+
+// New relation table for chat messages (since User can be null)
+model User_GameChatMessage {
+  userId        String
+  chatMessageId String
+
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatMessage GameChatMessage @relation(fields: [chatMessageId], references: [id], onDelete: Cascade)
+
+  @@id([userId, chatMessageId])
+  @@map("user_game_chat_messages")
+}
