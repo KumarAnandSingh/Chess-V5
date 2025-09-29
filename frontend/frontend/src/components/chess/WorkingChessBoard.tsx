@@ -223,12 +223,11 @@ export const WorkingChessBoard: React.FC<WorkingChessBoardProps> = ({
           options={boardOptions}
         />
         
-        {/* Game status overlay */}
+        {/* Game status overlay - show only important game states */}
         <div className="absolute -bottom-8 left-0 right-0 text-center">
           <div className="text-sm text-gray-600">
-            Turn: {game.turn() === 'w' ? 'White' : 'Black'} | 
-            {game.isCheck() && ' Check! |'}
-            {game.isGameOver() && ' Game Over!'}
+            {game.isCheck() && 'Check!'}
+            {game.isGameOver() && 'Game Over!'}
           </div>
         </div>
       </div>

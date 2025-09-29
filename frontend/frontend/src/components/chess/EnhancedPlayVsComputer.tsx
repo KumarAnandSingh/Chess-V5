@@ -878,15 +878,6 @@ export const EnhancedPlayVsComputer: React.FC<EnhancedPlayVsComputerProps> = ({
                 💡 Hint: Consider move {hintMove}
               </div>
             )}
-            {/* Debug info - remove in production */}
-            {import.meta.env.DEV && (
-              <div className="mt-2 text-xs bg-surface p-2 rounded" style={{ color: 'var(--color-text-muted)' }}>
-                <div>FEN: {gamePosition.substring(0, 30)}...</div>
-                <div>Turn: {game.turn() === 'w' ? 'White' : 'Black'}</div>
-                <div>Disabled: {(isComputerThinking || gameResult !== null).toString()}</div>
-                <div>Computer thinking: {isComputerThinking.toString()}</div>
-              </div>
-            )}
           </div>
         </div>
 
