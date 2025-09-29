@@ -9,25 +9,25 @@
    =========================================== */
 
 :root {
-  /* DARK THEME (Primary) - Professional Chess Platform Colors */
-  --color-bg-base: #0D1117;
-  --color-bg-alt: #161B22;
-  --color-surface: #21262D;
-  --color-surface-elevated: #2D333B;
-  --color-surface-overlay: #373E47;
-  --color-surface-glass: rgba(45, 51, 59, 0.8);
+  /* LIGHT THEME ONLY - Professional Chess Platform Colors */
+  --color-bg-base: #FFFFFF;
+  --color-bg-alt: #F8FAFC;
+  --color-surface: #F1F5F9;
+  --color-surface-elevated: #FFFFFF;
+  --color-surface-overlay: #FFFFFF;
+  --color-surface-glass: rgba(248, 250, 252, 0.95);
   --color-surface-highlight: rgba(56, 139, 253, 0.08);
   
-  /* TEXT HIERARCHY - Enhanced Readability */
-  --color-text-primary: #F0F6FC;
-  --color-text-secondary: #7D8590;
-  --color-text-muted: #656D76;
-  --color-text-disabled: #484F58;
-  --color-text-inverse: #24292F;
-  --color-text-brand: #58A6FF;
-  --color-text-success: #3FB950;
-  --color-text-warning: #D29922;
-  --color-text-danger: #F85149;
+  /* TEXT HIERARCHY - Light Theme Readable */
+  --color-text-primary: #0B1726;
+  --color-text-secondary: #0F1724;
+  --color-text-muted: #64748B;
+  --color-text-disabled: #94A3B8;
+  --color-text-inverse: #FFFFFF;
+  --color-text-brand: #2563EB;
+  --color-text-success: #059669;
+  --color-text-warning: #D97706;
+  --color-text-danger: #DC2626;
   
   /* CHESS.COM INSPIRED ACCENT SYSTEM */
   --color-accent-primary: #769656;
@@ -93,23 +93,23 @@
   --color-board-last-move: rgba(255, 255, 0, 0.3);
   --color-board-premium-hint: rgba(204, 149, 67, 0.4);
   
-  /* ENHANCED BORDER SYSTEM */
-  --color-border-subtle: #30363D;
-  --color-border-default: #373E47;
-  --color-border-strong: #484F58;
+  /* ENHANCED BORDER SYSTEM - Light Theme */
+  --color-border-subtle: #E2E8F0;
+  --color-border-default: #CBD5E1;
+  --color-border-strong: #94A3B8;
   --color-border-accent: var(--color-accent-primary);
   --color-border-success: var(--color-success);
   --color-border-warning: var(--color-warning);
   --color-border-danger: var(--color-danger);
-  --color-border-interactive: rgba(88, 166, 255, 0.3);
+  --color-border-interactive: rgba(37, 99, 235, 0.3);
   
-  /* PROFESSIONAL ELEVATION SYSTEM */
-  --elevation-subtle: 0 1px 3px rgba(1, 4, 9, 0.12);
-  --elevation-card: 0 3px 12px rgba(1, 4, 9, 0.18);
-  --elevation-elevated: 0 6px 20px rgba(1, 4, 9, 0.25);
-  --elevation-dropdown: 0 12px 28px rgba(1, 4, 9, 0.35);
-  --elevation-modal: 0 16px 40px rgba(1, 4, 9, 0.45);
-  --elevation-tooltip: 0 8px 24px rgba(1, 4, 9, 0.3);
+  /* PROFESSIONAL ELEVATION SYSTEM - Light Theme */
+  --elevation-subtle: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --elevation-card: 0 2px 10px rgba(0, 0, 0, 0.08);
+  --elevation-elevated: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --elevation-dropdown: 0 8px 32px rgba(0, 0, 0, 0.15);
+  --elevation-modal: 0 16px 64px rgba(0, 0, 0, 0.2);
+  --elevation-tooltip: 0 4px 20px rgba(0, 0, 0, 0.15);
   
   /* GLOW EFFECTS */
   --glow-accent-primary: 0 0 20px rgba(118, 150, 86, 0.3);
@@ -117,54 +117,12 @@
   --glow-success: 0 0 20px rgba(63, 185, 80, 0.3);
   --glow-danger: 0 0 20px rgba(248, 81, 73, 0.3);
   
-  /* LIGHT THEME TOKENS - Bug Report Specified Colors */
-  --color-bg-base-light: #FFFFFF;
-  --color-bg-alt-light: #F8FAFC;
-  --color-surface-light: #F1F5F9;
-  --color-surface-elevated-light: #FFFFFF;
-  --color-surface-overlay-light: #FFFFFF;
-  --color-text-primary-light: #0B1726;
-  --color-text-secondary-light: #0F1724;
-  --color-text-muted-light: #0F1724;
-  --color-text-disabled-light: #94A3B8;
-  --color-text-inverse-light: #FFFFFF;
+  /* Light theme tokens are now the main tokens above */
   
-  /* LIGHT THEME BORDERS */
-  --color-border-subtle-light: rgba(15, 23, 42, 0.1);
-  --color-border-default-light: rgba(15, 23, 42, 0.2);
-  --color-border-strong-light: rgba(15, 23, 42, 0.3);
   
-  /* LIGHT THEME CHESS BOARD */
-  --color-board-light-light: #F1F5F9;
-  --color-board-dark-light: #64748B;
 }
 
-/* Light theme activation */
-[data-theme="light"] {
-  --color-bg-base: var(--color-bg-base-light);
-  --color-bg-alt: var(--color-bg-alt-light);
-  --color-surface: var(--color-surface-light);
-  --color-surface-elevated: var(--color-surface-elevated-light);
-  --color-surface-overlay: var(--color-surface-overlay-light);
-  --color-text-primary: var(--color-text-primary-light);
-  --color-text-secondary: var(--color-text-secondary-light);
-  --color-text-muted: var(--color-text-muted-light);
-  --color-text-disabled: var(--color-text-disabled-light);
-  --color-text-inverse: var(--color-text-inverse-light);
-  --color-border-subtle: var(--color-border-subtle-light);
-  --color-border-default: var(--color-border-default-light);
-  --color-border-strong: var(--color-border-strong-light);
-  
-  /* Light theme chess board colors */
-  --color-board-light: var(--color-board-light-light);
-  --color-board-dark: var(--color-board-dark-light);
-  
-  /* Light theme shadows */
-  --elevation-subtle: 0 1px 3px rgba(15, 23, 42, 0.1);
-  --elevation-card: 0 2px 10px rgba(15, 23, 42, 0.08);
-  --elevation-dropdown: 0 4px 16px rgba(15, 23, 42, 0.12);
-  --elevation-modal: 0 8px 32px rgba(15, 23, 42, 0.15);
-}
+/* Light theme is now the default - no theme switching needed */
 
 /* ===========================================
    📐 SPACING SCALE (Consistent 8px baseline)
@@ -427,6 +385,94 @@
 }
 
 /* ===========================================
+   🔗 SHADCN/UI TOKEN BRIDGE (PHASE 3)
+   Maintains visual consistency with existing design
+   =========================================== */
+
+:root {
+  /* Shadcn/ui radius mapping to our tokens */
+  --radius: var(--radius-md); /* 14px - matches our primary radius */
+
+  /* Shadcn/ui shadow mapping to our elevation system */
+  --shadow-card: var(--elevation-card);
+
+  /* Background tokens for shadcn/ui compatibility */
+  --background: var(--color-bg-base);
+  --foreground: var(--color-text-primary);
+
+  /* Card tokens */
+  --card: var(--color-surface-elevated);
+  --card-foreground: var(--color-text-primary);
+
+  /* Muted tokens */
+  --muted: var(--color-surface);
+  --muted-foreground: var(--color-text-muted);
+
+  /* Border tokens */
+  --border: var(--color-border-default);
+
+  /* Primary accent tokens */
+  --primary: var(--color-accent-primary);
+  --primary-foreground: var(--color-accent-primary-contrast);
+
+  /* Secondary tokens */
+  --secondary: var(--color-surface-elevated);
+  --secondary-foreground: var(--color-text-primary);
+
+  /* Accent tokens */
+  --accent: var(--color-surface-highlight);
+  --accent-foreground: var(--color-text-primary);
+
+  /* Destructive/danger tokens */
+  --destructive: var(--color-danger);
+  --destructive-foreground: var(--color-text-inverse);
+
+  /* Input tokens */
+  --input: var(--color-border-default);
+  --ring: var(--color-focus-ring);
+
+  /* Popover tokens */
+  --popover: var(--color-surface-elevated);
+  --popover-foreground: var(--color-text-primary);
+}
+
+/* Dark mode removed - light theme only */
+
+/* Shadcn/ui tokens for light theme only */
+:root {
+  --background: 0 0% 100%; /* White background */
+  --foreground: 222.2 84% 4.9%; /* Dark text for high contrast */
+
+  --card: 0 0% 100%; /* White cards */
+  --card-foreground: 222.2 84% 4.9%;
+
+  --muted: 210 40% 96%; /* Light muted background */
+  --muted-foreground: 215.4 16.3% 46.9%; /* Muted text */
+
+  --border: 214.3 31.8% 91.4%; /* Light border */
+
+  --primary: 221.2 83.2% 53.3%; /* Blue primary for better visibility */
+  --primary-foreground: 210 40% 98%;
+
+  --secondary: 210 40% 96%; /* Light secondary */
+  --secondary-foreground: 222.2 84% 4.9%;
+
+  --accent: 210 40% 96%; /* Subtle accent */
+  --accent-foreground: 222.2 84% 4.9%;
+
+  --destructive: 0 84% 60%; /* Red destructive */
+  --destructive-foreground: 210 40% 98%;
+
+  --input: 214.3 31.8% 91.4%; /* Light input borders */
+  --ring: 221.2 83.2% 53.3%; /* Focus ring */
+
+  --popover: 0 0% 100%; /* White popover */
+  --popover-foreground: 222.2 84% 4.9%;
+}
+
+/* Light theme is now the default - no overrides needed */
+
+/* ===========================================
    📐 BASE STYLES
    =========================================== */
 
@@ -456,7 +502,7 @@ body {
   color: var(--color-text-primary) !important;
 }
 
-/* Force dark theme on app container */
+/* Light theme app container */
 .app-container {
   background-color: var(--color-bg-base) !important;
   color: var(--color-text-primary) !important;

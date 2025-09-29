@@ -7,9 +7,13 @@ import { GameLevel, GameLevelDisplay, GAME_LEVELS } from './GameLevel';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
-import { Crown, Settings, RotateCcw, Flag, Trophy, Brain, Play, X, Users, Award, TrendingUp, CheckCircle, XCircle, Minus } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { Crown, Settings, RotateCcw, Flag, Trophy, Brain, Play, X, Users, Award, TrendingUp, CheckCircle, XCircle, Minus, Lightbulb, Undo2, ArrowLeft } from 'lucide-react';
 import { ThinkingAnimation, Confetti, CelebrationNudge } from '../ui/GamificationEffects';
 import { audioService } from '../../services/audioService';
+import CapturedPieces from './CapturedPieces';
+import PlayerAvatar from './PlayerAvatar';
+import MoveListPanel from './MoveListPanel';
 
 interface EnhancedPlayVsComputerProps {
   initialLevel?: number;
@@ -72,6 +76,20 @@ export const EnhancedPlayVsComputer: React.FC<EnhancedPlayVsComputerProps> = ({
   const [currentLevel, setCurrentLevel] = useState<GameLevel>(GAME_LEVELS[0]);
   const [gameSummary, setGameSummary] = useState<GameSummary | null>(null);
   const [currentTime, setCurrentTime] = useState(Date.now());
+
+  // Captured pieces tracking
+  const [capturedPieces, setCapturedPieces] = useState<{
+    player: string[];
+    computer: string[];
+  }>({ player: [], computer: [] });
+
+  // Move history and undo functionality
+  const [gameHistory, setGameHistory] = useState<string[]>([]);
+  const [moveHistory, setMoveHistory] = useState<Array<{ moveNumber: number; san: string; piece?: string }>>([]);
+
+  // Hint system
+  const [showHint, setShowHint] = useState(false);
+  const [hintMove, setHintMove] = useState<string | null>(null);
   
   // Player statistics (in real app, this would be in a store or database)
   const [playerStats, setPlayerStats] = useState<PlayerStats>(() => {
@@ -140,7 +158,7 @@ export const EnhancedPlayVsComputer: React.FC<EnhancedPlayVsComputerProps> = ({
   // Start new game
   const startNewGame = (color: 'white' | 'black') => {
     console.log('Starting new game:', color, 'vs', currentLevel.botName);
-    
+
     const newGame = new Chess();
     setGame(newGame);
     setGamePosition(newGame.fen());
@@ -150,17 +168,22 @@ export const EnhancedPlayVsComputer: React.FC<EnhancedPlayVsComputerProps> = ({
     setMoveCount(0);
     setPlayerMoves(0);
     setGameStartTime(Date.now());
-    
+    // Reset captured pieces
+    setCapturedPieces({ player: [], computer: [] });
+    // Initialize history
+    setGameHistory([newGame.fen()]);
+    setMoveHistory([]);
+
     // Configure engine for selected level
     stockfishEngine.setDifficulty(
       currentLevel.difficulty === 'beginner' ? 'easy' :
       currentLevel.difficulty === 'intermediate' ? 'medium' :
       currentLevel.difficulty === 'advanced' ? 'hard' : 'expert'
     );
-    
+
     // Play game start sound
     audioService.playGameStateSound('start');
-    
+
     // If player is black, make computer move first
     if (color === 'black') {
       console.log('Player is black, computer will move first');
@@ -197,10 +220,26 @@ export const EnhancedPlayVsComputer: React.FC<EnhancedPlayVsComputerProps> = ({
             setGame(new Chess(gameState.fen()));
             setGamePosition(gameState.fen());
             setMoveCount(prev => prev + 1);
-            
+
+            // Track history
+            setGameHistory(prev => [...prev, gameState.fen()]);
+            setMoveHistory(prev => [...prev, {
+              moveNumber: Math.ceil((prev.length + 1) / 2),
+              san: move.san,
+              piece: move.piece
+            }]);
+
+            // Track captured pieces
+            if (move.captured) {
+              setCapturedPieces(prev => ({
+                ...prev,
+                computer: [...prev.computer, move.captured!]
+              }));
+            }
+
             // Play move sound
             audioService.playMoveSound(!!move.captured);
-            
+
             // Check for game end
             checkGameEnd(gameState);
           } else {
@@ -233,7 +272,23 @@ export const EnhancedPlayVsComputer: React.FC<EnhancedPlayVsComputerProps> = ({
       setGamePosition(newGame.fen());
       setMoveCount(prev => prev + 1);
       setPlayerMoves(prev => prev + 1);
-      
+
+      // Track history
+      setGameHistory(prev => [...prev, newGame.fen()]);
+      setMoveHistory(prev => [...prev, {
+        moveNumber: Math.ceil((prev.length + 1) / 2),
+        san: moveResult.san,
+        piece: moveResult.piece
+      }]);
+
+      // Track captured pieces
+      if (moveResult.captured) {
+        setCapturedPieces(prev => ({
+          ...prev,
+          player: [...prev.player, moveResult.captured!]
+        }));
+      }
+
       // Check for game end
       if (checkGameEnd(newGame)) {
         return;
@@ -360,6 +415,70 @@ export const EnhancedPlayVsComputer: React.FC<EnhancedPlayVsComputerProps> = ({
     });
   };
 
+  // Undo functionality
+  const undoLastMove = useCallback(async () => {
+    if (gameHistory.length < 2 || isComputerThinking || gameResult !== null) {
+      return;
+    }
+
+    // Revert to the position before the last two moves (player + computer)
+    const targetHistoryIndex = Math.max(0, gameHistory.length - 2);
+    const targetFen = gameHistory[targetHistoryIndex];
+
+    const newGame = new Chess(targetFen);
+    setGame(newGame);
+    setGamePosition(targetFen);
+
+    // Update history
+    setGameHistory(prev => prev.slice(0, targetHistoryIndex + 1));
+    setMoveHistory(prev => prev.slice(0, Math.max(0, prev.length - 2)));
+
+    // Recalculate captured pieces by replaying moves
+    const tempGame = new Chess();
+    const newCaptured = { player: [], computer: [] };
+
+    moveHistory.slice(0, Math.max(0, moveHistory.length - 2)).forEach((move, index) => {
+      const moveResult = tempGame.move(move.san);
+      if (moveResult && moveResult.captured) {
+        if (index % 2 === 0) {
+          // Player move
+          newCaptured.player.push(moveResult.captured);
+        } else {
+          // Computer move
+          newCaptured.computer.push(moveResult.captured);
+        }
+      }
+    });
+
+    setCapturedPieces(newCaptured);
+    setPlayerMoves(prev => Math.max(0, prev - 1));
+
+    audioService.playUISound('notification');
+  }, [gameHistory, isComputerThinking, gameResult, moveHistory]);
+
+  // Hint functionality
+  const getHint = useCallback(async () => {
+    if (isComputerThinking || gameResult !== null || game.turn() !== playerColor[0]) {
+      return;
+    }
+
+    setShowHint(true);
+    try {
+      const bestMove = await stockfishEngine.getBestMove(gamePosition, 15); // Higher skill for hints
+      if (bestMove && bestMove !== 'a1a1') {
+        setHintMove(bestMove);
+        // Show hint for 3 seconds
+        setTimeout(() => {
+          setShowHint(false);
+          setHintMove(null);
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Error getting hint:', error);
+      setShowHint(false);
+    }
+  }, [isComputerThinking, gameResult, game, gamePosition, playerColor]);
+
   // Reset game
   const resetGame = () => {
     setGameStarted(false);
@@ -371,6 +490,13 @@ export const EnhancedPlayVsComputer: React.FC<EnhancedPlayVsComputerProps> = ({
     setShowGameSummary(false);
     setPlayerMoves(0);
     setGameSummary(null);
+    // Reset captured pieces
+    setCapturedPieces({ player: [], computer: [] });
+    // Reset history
+    setGameHistory([]);
+    setMoveHistory([]);
+    setShowHint(false);
+    setHintMove(null);
   };
   
   // Quit game
@@ -499,23 +625,23 @@ export const EnhancedPlayVsComputer: React.FC<EnhancedPlayVsComputerProps> = ({
               </Badge>
             </div>
             
-            <div className="grid grid-cols-2 gap-6 mb-6">
-              <Card className="p-4">
-                <h3 className="font-semibold mb-3 flex items-center gap-2">
-                  <Users className="h-4 w-4" /> Performance Comparison
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <Card className="px-6 py-5 transition-all duration-200 hover:shadow-lg">
+                <h3 className="font-semibold mb-4 flex items-center gap-2">
+                  <Users className="h-5 w-5 text-blue-600" /> Performance Comparison
                 </h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span>Your moves:</span>
-                    <span className="font-bold">{gameSummary.playerMoves}</span>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Your moves:</span>
+                    <span className="font-bold text-lg">{gameSummary.playerMoves}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Pro moves:</span>
-                    <span className="font-bold">{gameSummary.proMoves}</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Pro moves:</span>
+                    <span className="font-bold text-lg text-green-600">{gameSummary.proMoves}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Efficiency:</span>
-                    <span className={`font-bold ${
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Efficiency:</span>
+                    <span className={`font-bold text-lg ${
                       gameSummary.playerMoves <= gameSummary.proMoves * 1.2 ? 'text-green-600' :
                       gameSummary.playerMoves <= gameSummary.proMoves * 1.5 ? 'text-yellow-600' :
                       'text-red-600'
@@ -523,25 +649,25 @@ export const EnhancedPlayVsComputer: React.FC<EnhancedPlayVsComputerProps> = ({
                       {Math.round((gameSummary.proMoves / gameSummary.playerMoves) * 100)}%
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Time taken:</span>
-                    <span className="font-bold">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Time taken:</span>
+                    <span className="font-bold text-lg font-mono">
                       {Math.floor(gameSummary.timeTaken / 60000)}:
                       {String(Math.floor((gameSummary.timeTaken % 60000) / 1000)).padStart(2, '0')}
                     </span>
                   </div>
                 </div>
               </Card>
-              
-              <Card className="p-4">
-                <h3 className="font-semibold mb-3 flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4" /> Tips & Improvement
+
+              <Card className="px-6 py-5 transition-all duration-200 hover:shadow-lg">
+                <h3 className="font-semibold mb-4 flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-green-600" /> Tips & Improvement
                 </h3>
-                <ul className="space-y-1 text-sm">
+                <ul className="space-y-2 text-sm">
                   {gameSummary.tips.map((tip, index) => (
                     <li key={index} className="flex items-start gap-2">
-                      <span className="text-green-500 mt-0.5">•</span>
-                      {tip}
+                      <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <span>{tip}</span>
                     </li>
                   ))}
                 </ul>
@@ -582,14 +708,14 @@ export const EnhancedPlayVsComputer: React.FC<EnhancedPlayVsComputerProps> = ({
   if (showLevelSelect) {
     return (
       <div className="container mx-auto px-4 py-6 max-w-6xl">
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Crown className="h-6 w-6" />
+        <Card className="mb-6 transition-all duration-200 hover:shadow-lg">
+          <CardHeader className="px-6 py-5">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Crown className="h-6 w-6 text-yellow-600" />
               Choose Your Challenge Level
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-6 py-5">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
               {GAME_LEVELS.slice(0, 25).map((level) => (
                 <GameLevelDisplay
@@ -603,31 +729,50 @@ export const EnhancedPlayVsComputer: React.FC<EnhancedPlayVsComputerProps> = ({
                 />
               ))}
             </div>
-            
+
             <div className="mt-6 flex justify-center gap-4">
-              <Button
-                onClick={() => {
-                  setShowColorSelect(true);
-                  setShowLevelSelect(false);
-                }}
-                disabled={!selectedLevel || !currentLevel}
-                size="lg"
-                className={`flex items-center gap-2 bg-green-600 hover:bg-green-700 ${
-                  (!selectedLevel || !currentLevel) ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-              >
-                <Play className="h-5 w-5" />
-                PLAY vs {currentLevel?.botName || 'Computer'}
-              </Button>
-              <Button
-                onClick={() => setShowLeaderboard(true)}
-                variant="outline"
-                size="lg"
-                className="flex items-center gap-2"
-              >
-                <Trophy className="h-4 w-4" />
-                Leaderboard
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() => {
+                        setShowColorSelect(true);
+                        setShowLevelSelect(false);
+                      }}
+                      disabled={!selectedLevel || !currentLevel}
+                      size="lg"
+                      className={`flex items-center gap-2 bg-green-600 hover:bg-green-700 transition-all duration-200 hover:scale-105 ${
+                        (!selectedLevel || !currentLevel) ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                    >
+                      <Play className="h-5 w-5" />
+                      PLAY vs {currentLevel?.botName || 'Computer'}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Start playing against the selected bot</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() => setShowLeaderboard(true)}
+                      variant="outline"
+                      size="lg"
+                      className="flex items-center gap-2 transition-all duration-200 hover:scale-105"
+                    >
+                      <Trophy className="h-4 w-4" />
+                      Leaderboard
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>View rankings and your statistics</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </CardContent>
         </Card>
@@ -695,72 +840,26 @@ export const EnhancedPlayVsComputer: React.FC<EnhancedPlayVsComputerProps> = ({
   // Main game screen
   return (
     <div className="container mx-auto px-4 py-4 md:py-8 max-w-7xl">
-      {/* Game Header */}
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Badge 
-            className="px-3 py-1 min-h-[20px] text-white font-semibold text-sm"
-            style={{
-              backgroundColor: currentLevel.id <= 8 ? '#22C55E' : 
-                             currentLevel.id <= 16 ? '#EAB308' : 
-                             currentLevel.id <= 20 ? '#F97316' : 
-                             currentLevel.id <= 23 ? '#DC2626' : '#7C2D12',
-              color: '#FFFFFF',
-              border: '1px solid rgba(255,255,255,0.2)'
-            }}
-          >
-            {currentLevel.icon}
-            <span className="ml-1">Level {currentLevel.id}</span>
-          </Badge>
-          <div>
-            <h2 className="text-xl font-bold">{currentLevel.name}</h2>
-            <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>vs {currentLevel.botName}</p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <Button 
-            onClick={() => window.confirm("Are you sure you want to quit this game?") && quitGame()} 
-            variant="destructive" 
-            size="sm" 
-            className="min-h-[44px] bg-red-600 hover:bg-red-700 text-white border-red-600"
-          >
-            <X className="h-4 w-4 mr-1" />
-            Quit
-          </Button>
-          <Button 
-            onClick={() => window.confirm("Are you sure you want to forfeit this game?") && forfeitGame()} 
-            variant="outline" 
-            size="sm" 
-            className="min-h-[44px] text-red-600 hover:text-red-700 border-red-600 hover:bg-red-50"
-          >
-            <Flag className="h-4 w-4 mr-1" />
-            Forfeit
-          </Button>
-          <Button 
-            onClick={resetGame} 
-            variant="primary" 
-            size="sm" 
-            className="min-h-[44px]"
-            style={{ 
-              backgroundColor: 'var(--color-cta-primary)', 
-              color: '#ffffff',
-              border: 'none'
-            }}
-          >
-            <RotateCcw className="h-4 w-4 mr-1" />
-            New Game
-          </Button>
-        </div>
+      {/* Top Player Section */}
+      <div className="mb-4">
+        <PlayerAvatar
+          playerName={currentLevel.botName}
+          rating={1200 + currentLevel.id * 50}
+          isCurrentPlayer={false}
+          capturedPieces={capturedPieces.computer}
+          playerColor={playerColor === 'white' ? 'white' : 'black'}
+          position="top"
+          className="bg-white border border-gray-200 rounded-lg shadow-sm"
+        />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
         {/* Chess Board */}
         <div className="xl:col-span-3 flex justify-center">
-          <div 
-            className="relative w-full max-w-[600px]" 
-            style={{ 
-              maxHeight: 'calc(100vh - 200px)',
+          <div
+            className="relative w-full max-w-[600px]"
+            style={{
+              maxHeight: 'calc(100vh - 300px)',
               minHeight: '400px'
             }}
           >
@@ -773,6 +872,12 @@ export const EnhancedPlayVsComputer: React.FC<EnhancedPlayVsComputerProps> = ({
               enableGamification={true}
               showHelp={false}
             />
+            {/* Hint overlay */}
+            {showHint && hintMove && (
+              <div className="absolute top-2 left-2 bg-yellow-100 border border-yellow-400 text-yellow-800 px-3 py-2 rounded-md text-sm font-medium shadow-lg z-10">
+                💡 Hint: Consider move {hintMove}
+              </div>
+            )}
             {/* Debug info - remove in production */}
             {import.meta.env.DEV && (
               <div className="mt-2 text-xs bg-surface p-2 rounded" style={{ color: 'var(--color-text-muted)' }}>
@@ -785,90 +890,201 @@ export const EnhancedPlayVsComputer: React.FC<EnhancedPlayVsComputerProps> = ({
           </div>
         </div>
 
-        {/* Game Info Panel */}
-        <div className="space-y-4">
-          {/* Game Status */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Game Status</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span>Your Moves:</span>
-                  <span className="font-bold">{playerMoves}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Target Moves:</span>
-                  <span className="font-bold text-green-600">{PRO_MOVES_DATA[selectedLevel] || 50}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Time:</span>
-                  <span className="font-bold">
-                    {Math.floor((currentTime - gameStartTime) / 60000)}:
-                    {String(Math.floor(((currentTime - gameStartTime) % 60000) / 1000)).padStart(2, '0')}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Turn:</span>
-                  <span className="font-bold">
-                    {game.turn() === playerColor[0] ? 'Your move' : currentLevel.botName + "'s move"}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Bot Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Brain className="h-4 w-4" />
-                {currentLevel.botName}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm mb-2" style={{ color: 'var(--color-text-secondary)' }}>{currentLevel.description}</p>
-              <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                Difficulty: {currentLevel.difficulty}
-                {currentLevel.timeLimit && ` • ${currentLevel.timeLimit}s per move`}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Game Result */}
-          {gameResult && (
-            <Card className={
-              gameResult === 'win' ? 'border-green-500 bg-green-50' :
-              gameResult === 'lose' ? 'border-red-500 bg-red-50' :
-              'border-yellow-500 bg-yellow-50'
-            }>
-              <CardContent className="pt-6 text-center">
-                <div className="flex justify-center mb-2">
-                  {gameResult === 'win' ? (
-                    <Trophy className="h-8 w-8 text-yellow-500" aria-label="Victory" />
-                  ) : gameResult === 'lose' ? (
-                    <XCircle className="h-8 w-8 text-red-500" aria-label="Defeat" />
-                  ) : (
-                    <Minus className="h-8 w-8 text-gray-500" aria-label="Draw" />
-                  )}
-                </div>
-                <h3 className="text-lg font-bold mb-2">
-                  {gameResult === 'win' ? 'Victory!' : gameResult === 'lose' ? 'Defeat' : 'Draw'}
-                </h3>
-                <div className="flex gap-2 justify-center">
-                  <Button onClick={resetGame} size="sm">
-                    New Game
-                  </Button>
-                  <Button onClick={() => setSelectedLevel(Math.min(25, selectedLevel + 1))} size="sm">
-                    Next Level
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+        {/* Move List Panel */}
+        <div className="xl:col-span-1">
+          <MoveListPanel
+            moves={moveHistory}
+            opening="Bird's Opening"
+            currentMoveIndex={moveHistory.length - 1}
+            className="h-full"
+          />
         </div>
       </div>
+
+      {/* Bottom Player Section */}
+      <div className="mt-4">
+        <PlayerAvatar
+          playerName="You"
+          rating={1500}
+          isCurrentPlayer={true}
+          capturedPieces={capturedPieces.player}
+          playerColor={playerColor === 'white' ? 'black' : 'white'}
+          position="bottom"
+          className="bg-white border border-gray-200 rounded-lg shadow-sm"
+        />
+      </div>
+
+      {/* Bottom Action Bar */}
+      <div className="mt-6 flex items-center justify-between bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          {/* Game Status Badge */}
+          <Badge
+            className="px-3 py-1 min-h-[20px] text-white font-semibold text-sm"
+            style={{
+              backgroundColor: currentLevel.id <= 8 ? '#22C55E' :
+                             currentLevel.id <= 16 ? '#EAB308' :
+                             currentLevel.id <= 20 ? '#F97316' :
+                             currentLevel.id <= 23 ? '#DC2626' : '#7C2D12',
+              color: '#FFFFFF',
+              border: '1px solid rgba(255,255,255,0.2)'
+            }}
+          >
+            {currentLevel.icon} Level {currentLevel.id}
+          </Badge>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={() => window.confirm("Are you sure you want to forfeit this game?") && forfeitGame()}
+                    variant="outline"
+                    size="sm"
+                    className="h-9 px-3 rounded-md border border-red-300 bg-white hover:bg-red-50 text-red-600 hover:text-red-700 font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                  >
+                    <Flag className="h-4 w-4 mr-1.5" />
+                    Flag
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Forfeit this game (counts as a loss)</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={undoLastMove}
+                    disabled={gameHistory.length < 2 || isComputerThinking || gameResult !== null}
+                    variant="outline"
+                    size="sm"
+                    className="h-9 px-3 rounded-md border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 hover:text-gray-900 font-medium transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50"
+                  >
+                    <Undo2 className="h-4 w-4 mr-1.5" />
+                    Undo
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Take back your last move</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 px-3 rounded-md border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 hover:text-gray-900 font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                  >
+                    <Settings className="h-4 w-4 mr-1.5" />
+                    Settings
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Open game settings</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </div>
+
+        {/* Right Side Actions */}
+        <div className="flex items-center gap-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={getHint}
+                  disabled={isComputerThinking || gameResult !== null || game.turn() !== playerColor[0]}
+                  variant="outline"
+                  size="sm"
+                  className="h-9 px-3 rounded-md border border-yellow-300 bg-white hover:bg-yellow-50 text-yellow-700 hover:text-yellow-900 font-medium transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50"
+                >
+                  <Lightbulb className="h-4 w-4 mr-1.5" />
+                  Hint
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Get a helpful hint for your next move</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={forfeitGame}
+                  variant="destructive"
+                  size="sm"
+                  className="h-9 px-4 rounded-md bg-red-600 hover:bg-red-700 text-white font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                >
+                  Resign
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Resign this game</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      </div>
+
+      {/* Game Result Modal */}
+      {gameResult && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className={`max-w-md mx-4 ${
+            gameResult === 'win' ? 'border-green-500 bg-green-50' :
+            gameResult === 'lose' ? 'border-red-500 bg-red-50' :
+            'border-yellow-500 bg-yellow-50'
+          }`}>
+            <CardContent className="p-6 text-center">
+              <div className="flex justify-center mb-3">
+                {gameResult === 'win' ? (
+                  <div className="animate-bounce">
+                    <Trophy className="h-16 w-16 text-yellow-500" />
+                  </div>
+                ) : gameResult === 'lose' ? (
+                  <XCircle className="h-16 w-16 text-red-500" />
+                ) : (
+                  <Minus className="h-16 w-16 text-gray-500" />
+                )}
+              </div>
+              <h3 className="text-2xl font-bold mb-4">
+                {gameResult === 'win' ? 'Victory!' : gameResult === 'lose' ? 'Defeat' : 'Draw'}
+              </h3>
+              <div className="flex gap-3 justify-center">
+                <Button
+                  onClick={resetGame}
+                  size="lg"
+                  className="transition-all duration-200 hover:scale-105"
+                >
+                  <RotateCcw className="h-5 w-5 mr-2" />
+                  New Game
+                </Button>
+                {gameResult === 'win' && selectedLevel < 25 && (
+                  <Button
+                    onClick={() => {
+                      setSelectedLevel(Math.min(25, selectedLevel + 1));
+                      resetGame();
+                    }}
+                    size="lg"
+                    className="bg-green-600 hover:bg-green-700 transition-all duration-200 hover:scale-105"
+                  >
+                    <Award className="h-5 w-5 mr-2" />
+                    Next Level
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Thinking Animation */}
       <ThinkingAnimation
@@ -877,11 +1093,11 @@ export const EnhancedPlayVsComputer: React.FC<EnhancedPlayVsComputerProps> = ({
       />
 
       {/* Celebration Effects */}
-      <Confetti 
+      <Confetti
         show={showConfetti}
         onComplete={() => setShowConfetti(false)}
       />
-      
+
       <CelebrationNudge
         show={showCelebration}
         message={`Victory against ${currentLevel.botName}!`}

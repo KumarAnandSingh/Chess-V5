@@ -105,39 +105,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </Button>
           <h1 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>Chess Academy</h1>
           
-          {/* Theme toggle and Auth buttons for mobile */}
+          {/* Simplified mobile header - removed theme toggle and auth buttons */}
           <div className="flex items-center space-x-2">
-            {/* Mobile Theme Toggle */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleTheme}
-              style={{ color: 'var(--color-text-secondary)' }}
-              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-            >
-              {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </Button>
-            
-            {/* Mobile Auth Button */}
-            {isAuthenticated ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleLogout}
-                style={{ color: 'var(--color-text-secondary)' }}
-              >
-                <User className="h-4 w-4" />
-              </Button>
-            ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleAuthModal}
-                style={{ color: 'var(--color-text-secondary)' }}
-              >
-                <LogIn className="h-4 w-4" />
-              </Button>
-            )}
+            {/* Empty space for future features */}
           </div>
         </div>
 
@@ -152,42 +122,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <div></div> {/* Empty space for alignment */}
           <h1 className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>Chess Academy</h1>
           
-          {/* Theme toggle and Auth section for desktop */}
+          {/* Simplified desktop header - removed theme toggle and auth buttons */}
           <div className="flex items-center space-x-3">
-            {/* Theme Toggle Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleTheme}
-              className="p-2"
-              style={{ color: 'var(--color-text-secondary)' }}
-              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-            >
-              {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </Button>
-            {isAuthenticated && user ? (
-              <div className="flex items-center space-x-3">
-                <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Welcome, {user.displayName}</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleLogout}
-                  style={{ color: 'var(--color-text-secondary)' }}
-                >
-                  Logout
-                </Button>
-              </div>
-            ) : (
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={handleAuthModal}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                <LogIn className="h-4 w-4 mr-2" />
-                Login / Sign Up
-              </Button>
-            )}
+            {/* Empty space for future features */}
           </div>
         </div>
 

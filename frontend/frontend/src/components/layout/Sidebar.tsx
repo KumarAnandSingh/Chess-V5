@@ -25,60 +25,30 @@ import { useAuthStore } from '../../stores/authStore'
 import { cn } from '../../lib/utils'
 
 const navigation = [
-  { 
-    name: 'Play', 
-    href: '/play', 
-    icon: Monitor, 
-    description: 'Play against AI opponents',
-    badge: 'Live',
-    badgeColor: 'success'
+  {
+    name: 'Play with Bot',
+    href: '/play',
+    icon: Monitor,
+    description: 'Play against AI opponents'
   },
-  { 
-    name: 'Multiplayer', 
-    href: '/multiplayer', 
-    icon: Users, 
-    description: 'Play rated games vs humans',
-    badge: 'New',
-    badgeColor: 'destructive'
+  {
+    name: 'Learn Chess',
+    href: '/lessons',
+    icon: BookOpen,
+    description: 'Master chess fundamentals'
   },
-  { 
-    name: 'Learn', 
-    href: '/lessons', 
-    icon: BookOpen, 
-    description: 'Master chess fundamentals',
-    badge: 'Free',
-    badgeColor: 'primary'
-  },
-  { 
-    name: 'Puzzles', 
-    href: '/puzzles', 
-    icon: Puzzle, 
-    description: 'Sharpen your tactics',
-    badge: 'Daily',
-    badgeColor: 'warning'
-  },
-  { 
-    name: 'Dashboard', 
-    href: '/dashboard', 
-    icon: BarChart3, 
-    description: 'Track your progress',
-    showProgress: true
-  },
-  { 
-    name: 'Strength Test', 
-    href: '/strength-assessment', 
-    icon: Target, 
+  {
+    name: 'Strength Test',
+    href: '/strength-assessment',
+    icon: Target,
     description: 'Find your rating level',
-    badge: 'New',
-    badgeColor: 'accent',
-    divider: true 
+    divider: true
   },
-  { 
-    name: 'Leaderboard', 
-    href: '/leaderboard', 
-    icon: Trophy, 
-    description: 'Global rankings',
-    showStats: true
+  {
+    name: 'Leaderboard',
+    href: '/leaderboard',
+    icon: Trophy,
+    description: 'Global rankings'
   }
 ]
 
@@ -253,17 +223,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed = false,
                             </div>
                           )}
                         </div>
-                        {(item as any).badge && (
-                          <div className={cn(
-                            "px-2 py-0.5 rounded-full text-xs font-medium",
-                            (item as any).badgeColor === 'success' && "bg-success/20 text-success",
-                            (item as any).badgeColor === 'primary' && "bg-accent-primary/20 text-accent-primary",
-                            (item as any).badgeColor === 'warning' && "bg-warning/20 text-warning",
-                            (item as any).badgeColor === 'accent' && "bg-accent-secondary/20 text-accent-secondary"
-                          )}>
-                            {(item as any).badge}
-                          </div>
-                        )}
                       </div>
                     )}
                   </Link>

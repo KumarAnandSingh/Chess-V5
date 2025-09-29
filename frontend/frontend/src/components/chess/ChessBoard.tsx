@@ -501,13 +501,18 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
             />
           </div>
           
-          {/* Coordinates and status display */}
-          {showCoordinates && (
+          {/* Status display - removed debug coordinates */}
+          {showCoordinates && game.isCheck() && (
             <div className="absolute -bottom-8 left-0 right-0 text-center">
-              <div className="text-sm font-secondary" style={{ color: 'var(--color-text-secondary)' }}>
-                Turn: {game.turn() === 'w' ? 'White' : 'Black'}
-                {game.isCheck() && <span className="text-warning font-medium"> | Check!</span>}
-                {game.isGameOver() && <span className="text-danger font-medium"> | Game Over!</span>}
+              <div className="text-sm font-secondary font-medium text-warning">
+                Check!
+              </div>
+            </div>
+          )}
+          {showCoordinates && game.isGameOver() && (
+            <div className="absolute -bottom-8 left-0 right-0 text-center">
+              <div className="text-sm font-secondary font-medium text-danger">
+                Game Over!
               </div>
             </div>
           )}

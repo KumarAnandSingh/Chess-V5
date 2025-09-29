@@ -10,16 +10,24 @@ import { AnimatedButton } from '../ui/AnimatedButton';
 import { MotivationalNotification } from '../ui/ProgressIndicators';
 import { FadeIn, Bounce } from '../ui/AnimationUtils';
 import { audioService } from '../../services/audioService';
+import { Lightbulb, Undo2, Flag, ArrowLeft, BarChart3 } from 'lucide-react';
+import CapturedPieces from './CapturedPieces';
+import { usePerformanceTracking } from '../../hooks/usePerformanceTracking';
+import PerformanceAnalysisModal from './PerformanceAnalysisModal';
+import SessionLeaderboard from './SessionLeaderboard';
+import { ToastNotification, useToast } from '../ui/ToastNotification';
 
 interface PlayVsComputerProps {
   difficulty?: 'easy' | 'medium' | 'hard' | 'expert';
   playerColor?: 'white' | 'black';
+  levelId?: number; // Add level ID prop
   onGameEnd?: (result: string, winner: 'player' | 'computer' | 'draw') => void;
 }
 
 export const PlayVsComputer: React.FC<PlayVsComputerProps> = ({
   difficulty = 'medium',
   playerColor = 'white',
+  levelId = 1, // Default to level 1
   onGameEnd,
 }) => {
   const [game, setGame] = useState(new Chess());
@@ -33,25 +41,53 @@ export const PlayVsComputer: React.FC<PlayVsComputerProps> = ({
   const [xpGained, setXpGained] = useState(0);
   const [gameResult, setGameResult] = useState<'player' | 'computer' | 'draw' | null>(null);
   const [showAICoach, setShowAICoach] = useState(false);
+  const [showPerformanceModal, setShowPerformanceModal] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [finalGameData, setFinalGameData] = useState(null);
+  const [moveStartTime, setMoveStartTime] = useState(Date.now());
+  const [lastMoveEvaluation, setLastMoveEvaluation] = useState<number>(0);
   const [notification, setNotification] = useState<{
     message: string;
     type: 'success' | 'achievement' | 'streak' | 'level' | 'encouragement';
     isVisible: boolean;
   }>({ message: '', type: 'success', isVisible: false });
 
+  // Performance tracking
+  const {
+    guestId,
+    currentGame,
+    gameHistory,
+    stats,
+    startGame,
+    recordMove,
+    recordHint,
+    recordUndo,
+    endGame,
+    isCurrentLevelBoss
+  } = usePerformanceTracking();
+
+  // Toast notifications for aids
+  const { toast, showHintToast, showUndoToast, hideToast } = useToast();
+
+  // Captured pieces tracking
+  const [capturedPieces, setCapturedPieces] = useState<{
+    player: string[];
+    computer: string[];
+  }>({ player: [], computer: [] });
+
   const { completeGame } = useGamificationStore();
   const aiCoach = useGameCoach();
 
   useEffect(() => {
     console.log('PlayVsComputer: Setting up engine listeners');
-    
+
     // FIXED: Check if engine is already ready
     if (stockfishEngine.ready) {
       console.log('PlayVsComputer: Engine already ready');
       setEngineReady(true);
       stockfishEngine.setDifficulty(difficulty);
     }
-    
+
     // Set up ready event listener
     const onReady = () => {
       console.log('PlayVsComputer: Engine ready event received');
@@ -60,11 +96,19 @@ export const PlayVsComputer: React.FC<PlayVsComputerProps> = ({
     };
 
     stockfishEngine.on('ready', onReady);
-    
+
     return () => {
       stockfishEngine.off('ready', onReady);
     };
   }, [difficulty]);
+
+  // Initialize performance tracking for new game
+  useEffect(() => {
+    if (guestId && !currentGame) {
+      startGame(levelId, difficulty);
+      setMoveStartTime(Date.now());
+    }
+  }, [guestId, currentGame, levelId, difficulty, startGame]);
 
   useEffect(() => {
     // If it's computer's turn and game is not over
@@ -122,22 +166,46 @@ export const PlayVsComputer: React.FC<PlayVsComputerProps> = ({
     }
   }, [game, isComputerThinking, playerColor]);
 
-  const handlePlayerMove = useCallback((move: { from: string; to: string; promotion?: string }) => {
+  const handlePlayerMove = useCallback(async (move: { from: string; to: string; promotion?: string }) => {
     if (isComputerThinking || game.isGameOver()) return;
 
     const gameCopy = new Chess(game.fen());
     const moveResult = gameCopy.move(move);
 
     if (moveResult) {
+      // Calculate time spent on move
+      const moveEndTime = Date.now();
+      const timeSpent = (moveEndTime - moveStartTime) / 1000;
+
+      // Get evaluation before move
+      const evaluationBefore = lastMoveEvaluation;
+
       setGame(gameCopy);
       setGamePosition(gameCopy.fen());
       setMoveHistory(prev => [...prev, moveResult.san]);
+
+      // Get evaluation after move
+      try {
+        const evalResult = await stockfishEngine.getEvaluation(gameCopy.fen());
+        const evaluationAfter = evalResult.score;
+        setLastMoveEvaluation(evaluationAfter);
+
+        // Record move for performance tracking
+        if (currentGame) {
+          await recordMove(moveResult.san, evaluationBefore, evaluationAfter, timeSpent);
+        }
+      } catch (error) {
+        console.log('Evaluation error:', error);
+      }
+
+      // Reset move timer for next move
+      setMoveStartTime(Date.now());
 
       if (gameCopy.isGameOver()) {
         handleGameOver(gameCopy);
       }
     }
-  }, [game, isComputerThinking]);
+  }, [game, isComputerThinking, moveStartTime, lastMoveEvaluation, currentGame, recordMove]);
 
   const handleGameOver = (gameState: Chess) => {
     let result = '';
@@ -162,11 +230,11 @@ export const PlayVsComputer: React.FC<PlayVsComputerProps> = ({
 
     const gameTimeSpent = Date.now() - gameStartTime;
     const playerWon = winner === 'player';
-    
+
     // Calculate XP based on game result
     let xp = playerWon ? 100 : 25; // Base XP from gamification store
     const bonuses = [];
-    
+
     if (difficulty === 'hard') {
       xp += 20;
       bonuses.push('Hard Mode');
@@ -175,55 +243,46 @@ export const PlayVsComputer: React.FC<PlayVsComputerProps> = ({
       xp += 40;
       bonuses.push('Expert Mode');
     }
-    
+
     setXpGained(xp);
     setGameStatus(result);
     setGameResult(winner);
-    
+
+    // End game in performance tracking
+    if (currentGame) {
+      const gameResultForTracking = winner === 'player' ? 'win' : winner === 'computer' ? 'loss' : 'draw';
+      const gamePgn = gameState.pgn(); // Get PGN from chess.js
+      const performanceData = endGame(gameResultForTracking, gamePgn);
+      if (performanceData) {
+        setFinalGameData(performanceData);
+        setShowPerformanceModal(true);
+      }
+    }
+
     // Play appropriate game over sound
     if (playerWon) {
       audioService.playGameStateSound('win');
       audioService.playGamificationSound('xp');
-      
-      // Show victory notification
-      setNotification({
-        message: `Victory! +${xp} XP${bonuses.length > 0 ? ' (' + bonuses.join(', ') + ' Bonus)' : ''}`,
-        type: 'achievement',
-        isVisible: true
-      });
     } else if (winner === 'computer') {
       audioService.playGameStateSound('lose');
-      
-      // Show encouragement notification
-      setNotification({
-        message: `Good effort! +${xp} XP earned`,
-        type: 'encouragement',
-        isVisible: true
-      });
     } else {
       // Draw
       audioService.playUISound('notification');
-      
-      setNotification({
-        message: `Well played! +${xp} XP for the draw`,
-        type: 'success',
-        isVisible: true
-      });
     }
-    
+
     // Award XP through gamification system
     completeGame(playerWon, gameTimeSpent);
-    
+
     // Analyze the game with AI coach
     aiCoach.analyzeGame(gameState.fen(), moveHistory);
-    
+
     onGameEnd?.(result, winner);
   };
 
   const resetGame = () => {
     audioService.playUISound('click');
     audioService.playGameStateSound('start');
-    
+
     const newGame = new Chess();
     setGame(newGame);
     setGamePosition(newGame.fen());
@@ -235,8 +294,34 @@ export const PlayVsComputer: React.FC<PlayVsComputerProps> = ({
     setXpGained(0);
     setGameResult(null);
     setShowAICoach(false);
+    setShowPerformanceModal(false);
+    setShowLeaderboard(false);
+    setFinalGameData(null);
+    setMoveStartTime(Date.now());
+    setLastMoveEvaluation(0);
     setNotification({ message: '', type: 'success', isVisible: false });
+    // Reset captured pieces
+    setCapturedPieces({ player: [], computer: [] });
     aiCoach.clearCoaching();
+
+    // Start new game in performance tracking
+    startGame(levelId, difficulty);
+  };
+
+  // Add hint and undo handlers with toast notifications
+  const handleHint = () => {
+    recordHint();
+    const isBoss = isCurrentLevelBoss();
+    showHintToast(isBoss);
+    audioService.playUISound('hint');
+  };
+
+  const handleUndo = () => {
+    recordUndo();
+    const isBoss = isCurrentLevelBoss();
+    showUndoToast(isBoss);
+    audioService.playUISound('undo');
+    // Add undo logic here if needed
   };
 
   const getDifficultyColor = () => {
@@ -344,15 +429,44 @@ export const PlayVsComputer: React.FC<PlayVsComputerProps> = ({
               >
                 Coach
               </AnimatedButton>
-              
+
+              <AnimatedButton
+                onClick={() => setShowLeaderboard(!showLeaderboard)}
+                variant="outline"
+                size="md"
+                icon={<BarChart3 className="w-4 h-4" />}
+              >
+                Stats
+              </AnimatedButton>
+
+              <AnimatedButton
+                onClick={handleHint}
+                variant="ghost"
+                size="md"
+                icon={<Lightbulb className="w-4 h-4" />}
+                disabled={isComputerThinking || game.isGameOver()}
+              >
+                Hint
+              </AnimatedButton>
+
+              <AnimatedButton
+                onClick={handleUndo}
+                variant="ghost"
+                size="md"
+                icon={<Undo2 className="w-4 h-4" />}
+                disabled={isComputerThinking || game.isGameOver() || moveHistory.length === 0}
+              >
+                Undo
+              </AnimatedButton>
+
               {gameResult && (
                 <AnimatedButton
-                  onClick={() => aiCoach.analyzeGame(game.fen(), moveHistory)}
+                  onClick={() => setShowPerformanceModal(true)}
                   variant="success"
                   size="md"
                   icon={<span>📊</span>}
                 >
-                  Analysis
+                  Performance
                 </AnimatedButton>
               )}
             </FlexContainer>
@@ -406,12 +520,6 @@ export const PlayVsComputer: React.FC<PlayVsComputerProps> = ({
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <FlexContainer justify="between">
-                    <span className="text-gray-700">Turn:</span>
-                    <span className="font-semibold text-gray-900">
-                      {game.turn() === 'w' ? 'White' : 'Black'}
-                    </span>
-                  </FlexContainer>
                   {game.isCheck() && (
                     <div className="text-red-600 font-bold text-center py-2 bg-red-50 rounded-lg border border-red-200">
                       ⚠️ Check!
@@ -505,8 +613,50 @@ export const PlayVsComputer: React.FC<PlayVsComputerProps> = ({
               )}
             </div>
           </div>
+          {/* Session Leaderboard */}
+          {showLeaderboard && stats && (
+            <FadeIn direction="left">
+              <SessionLeaderboard
+                stats={stats}
+                gameHistory={gameHistory}
+                className="max-h-96 overflow-y-auto"
+              />
+            </FadeIn>
+          )}
         </div>
       </FlexContainer>
+
+      {/* Performance Analysis Modal */}
+      {finalGameData && (
+        <PerformanceAnalysisModal
+          isOpen={showPerformanceModal}
+          onClose={() => setShowPerformanceModal(false)}
+          gameData={finalGameData}
+          onRematch={() => {
+            setShowPerformanceModal(false);
+            resetGame();
+          }}
+          onNextLevel={() => {
+            setShowPerformanceModal(false);
+            // Could navigate to next difficulty level
+            alert('Next level feature coming soon!');
+          }}
+          onChangeBot={() => {
+            setShowPerformanceModal(false);
+            // Could open bot selection dialog
+            alert('Bot selection feature coming soon!');
+          }}
+        />
+      )}
+
+      {/* Toast Notifications for Aid Usage */}
+      <ToastNotification
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={hideToast}
+        duration={4000}
+      />
     </ResponsiveContainer>
   );
 };

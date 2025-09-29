@@ -267,8 +267,10 @@ class StockfishEngine {
       }
 
       const timeout = setTimeout(() => {
-        resolve({ score: 0 }); // Return neutral evaluation on timeout
-      }, 5000);
+        // Return mock evaluation data for development
+        const mockEvaluation = this.getMockEvaluation(fen);
+        resolve(mockEvaluation);
+      }, 1000);
 
       let evaluation: { score: number; mate?: number; bestMove?: string } = { score: 0 };
 
@@ -276,7 +278,7 @@ class StockfishEngine {
         // Parse score from UCI info
         const cpMatch = info.match(/score cp (-?\d+)/);
         const mateMatch = info.match(/score mate (-?\d+)/);
-        
+
         if (mateMatch) {
           evaluation = { score: 0, mate: parseInt(mateMatch[1]) };
         } else if (cpMatch) {
@@ -293,10 +295,47 @@ class StockfishEngine {
 
       this.on('evaluation', onEvaluation);
       this.on('bestmove', onBestMove);
-      
+
       this.send(`position fen ${fen}`);
       this.send(`go depth ${depth}`);
     });
+  }
+
+  // Mock evaluation for development
+  private getMockEvaluation(fen: string): { score: number; mate?: number; bestMove?: string } {
+    try {
+      const chess = new Chess(fen);
+      let score = 0;
+
+      // Basic material evaluation
+      const pieces = chess.board().flat().filter(p => p !== null);
+      for (const piece of pieces) {
+        if (piece) {
+          const pieceValue = {
+            'p': 100, 'n': 320, 'b': 330, 'r': 500, 'q': 900, 'k': 0
+          }[piece.type] || 0;
+
+          score += piece.color === 'w' ? pieceValue : -pieceValue;
+        }
+      }
+
+      // Add some randomness to simulate analysis uncertainty
+      score += (Math.random() - 0.5) * 100;
+
+      // Check for game over conditions
+      if (chess.isCheckmate()) {
+        return { score: chess.turn() === 'w' ? -32000 : 32000, mate: 1 };
+      }
+
+      if (chess.isDraw()) {
+        return { score: 0 };
+      }
+
+      return { score: Math.round(score) };
+    } catch (error) {
+      console.error('Error in mock evaluation:', error);
+      return { score: 0 };
+    }
   }
 
   // FIXED: Add immediate ready check

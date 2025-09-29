@@ -1,21 +1,22 @@
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { 
-  Crown, 
-  Menu, 
-  X, 
-  User, 
-  Settings, 
-  BookOpen, 
-  Puzzle, 
-  Monitor, 
+import {
+  Crown,
+  Menu,
+  X,
+  User,
+  Settings,
+  BookOpen,
+  Puzzle,
+  Monitor,
   Trophy,
   BarChart3,
   LogOut,
   Shield,
   Smartphone,
   Bell,
-  Search
+  Search,
+  Target
 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
@@ -32,10 +33,9 @@ import { AuthModal } from '../auth/AuthModal'
 import { cn } from '../../lib/utils'
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
-  { name: 'Lessons', href: '/lessons', icon: BookOpen },
-  { name: 'Puzzles', href: '/puzzles', icon: Puzzle },
-  { name: 'vs Computer', href: '/play', icon: Monitor },
+  { name: 'Play with Bot', href: '/play', icon: Monitor },
+  { name: 'Learn Chess', href: '/lessons', icon: BookOpen },
+  { name: 'Strength Test', href: '/strength-assessment', icon: Target },
   { name: 'Leaderboard', href: '/leaderboard', icon: Trophy }
 ]
 
@@ -130,44 +130,19 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle, isMobileMenuOpen })
         {/* Spacer for non-authenticated users */}
         {!isAuthenticated && <div className="flex-1" />}
 
-        {/* Right side */}
+        {/* Right side - Login/Signup buttons removed for guest experience */}
         <div className={cn(
           "flex items-center",
           "space-x-2 mobile:space-x-3"
         )}>
           {isAuthenticated ? (
             <>
-              {/* Device indicator badge */}
-              <Badge 
-                variant="secondary" 
-                className={cn(
-                  "hidden sm:inline-flex text-xs",
-                  deviceInfo.isMobile && "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                )}
-              >
-                {deviceInfo.isMobile ? 'Mobile' : deviceInfo.isTablet ? 'Tablet' : 'Desktop'}
-              </Badge>
-
-              {/* Notifications - hide on mobile */}
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className={cn(
-                  "relative hidden sm:inline-flex",
-                  "h-10 w-10 mobile:h-12 mobile:w-12"
-                )}
-              >
-                <Bell className="h-5 w-5 mobile:h-6 mobile:w-6" />
-                <span className="absolute top-2 right-2 h-2 w-2 bg-destructive rounded-full"></span>
-                <span className="sr-only">Notifications</span>
-              </Button>
-
-              {/* Profile dropdown */}
+              {/* Profile dropdown - simplified for guest mode */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     className={cn(
                       "relative",
                       "h-10 w-10 mobile:h-12 mobile:w-12",
@@ -178,8 +153,8 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle, isMobileMenuOpen })
                     <span className="sr-only">Profile menu</span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent 
-                  align="end" 
+                <DropdownMenuContent
+                  align="end"
                   className={cn(
                     "w-56 mobile:w-64",
                     "mr-2 mobile:mr-4"
@@ -199,18 +174,7 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle, isMobileMenuOpen })
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  
-                  {/* Mobile device indicator */}
-                  {deviceInfo.isMobile && (
-                    <>
-                      <DropdownMenuItem className="sm:hidden">
-                        <Smartphone className="mr-2 h-4 w-4" />
-                        <span>Mobile View</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator className="sm:hidden" />
-                    </>
-                  )}
-                  
+
                   <DropdownMenuItem asChild>
                     <Link to="/profile" className="flex items-center">
                       <User className="mr-2 h-4 w-4" />
@@ -223,14 +187,7 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle, isMobileMenuOpen })
                       <span>Settings</span>
                     </Link>
                   </DropdownMenuItem>
-                  
-                  {/* Admin section for demo */}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <Shield className="mr-2 h-4 w-4" />
-                    <span>Admin Panel</span>
-                  </DropdownMenuItem>
-                  
+
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                     <LogOut className="mr-2 h-4 w-4" />
@@ -239,32 +196,7 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle, isMobileMenuOpen })
                 </DropdownMenuContent>
               </DropdownMenu>
             </>
-          ) : (
-            /* Authentication buttons for non-authenticated users */
-            <>
-              <Button 
-                variant="ghost" 
-                onClick={openLogin}
-                className={cn(
-                  "h-10 px-4 mobile:h-12 mobile:px-6",
-                  "touch:h-12 touch:px-6",
-                  "text-sm mobile:text-base"
-                )}
-              >
-                Sign In
-              </Button>
-              <Button 
-                onClick={openLogin}
-                className={cn(
-                  "h-10 px-4 mobile:h-12 mobile:px-6",
-                  "touch:h-12 touch:px-6",
-                  "text-sm mobile:text-base"
-                )}
-              >
-                Get Started
-              </Button>
-            </>
-          )}
+          ) : null}
         </div>
       </div>
       

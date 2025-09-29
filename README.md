@@ -1,183 +1,220 @@
-# ♟️ Chess Academy V3
+# Chess Academy v5 🏆
 
-A modern, real-time multiplayer chess platform built with React, TypeScript, Node.js, and Socket.IO.
+A comprehensive chess learning platform with advanced performance tracking and professional-grade analytics.
 
-![Chess Academy V3](https://img.shields.io/badge/version-3.0-blue.svg)
+![Chess Academy v5](https://img.shields.io/badge/version-5.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
-![Node.js](https://img.shields.io/badge/node-%3E%3D16.0.0-brightgreen.svg)
-![React](https://img.shields.io/badge/react-18.2.0-blue.svg)
-![TypeScript](https://img.shields.io/badge/typescript-5.0-blue.svg)
+![Node.js](https://img.shields.io/badge/node-%3E%3D20.19.0-brightgreen.svg)
+![React](https://img.shields.io/badge/react-19.1.1-blue.svg)
+![TypeScript](https://img.shields.io/badge/typescript-5.8-blue.svg)
 
-## 🎯 Features
+## ✨ Features
 
-### 🎮 Live Multiplayer Chess
-- **Real-time gameplay** with WebSocket connections
-- **Automatic matchmaking** by skill level
-- **Multiple time controls**: Bullet (1+0, 2+1), Blitz (3+0, 3+2, 5+0, 5+3), Rapid (10+0, 15+10), Classical (30+0)
-- **Board orientation** for both players (white/black perspective)
-- **Move validation** with chess.js engine
-- **Game state synchronization** across all connected clients
+### 🎯 Performance Tracking System
+- **Performance Index (PI)**: 0-100 scale with detailed analytics
+- **Star Ratings**: 0-3 stars based on game performance
+- **Move Analysis**: Real-time evaluation of Inaccuracies, Mistakes, and Blunders
+- **Session Progress**: Guest-friendly tracking without authentication
+- **Boss Levels**: Special challenges with enhanced difficulty
 
-### 💬 Interactive Chat System
-- **Real-time messaging** during games
-- **Chess-specific quick messages** for fun banter
-  - "What are you thinking? 🤔"
-  - "Taking so long to move your piece! ⏰"
-  - "Nice move! 👍"
-  - "Checkmate coming! ⚔️"
-- **Emoji support** with chess-themed reactions
-- **Draggable & resizable** chat window
-- **Collapsible interface** to focus on the game
+### ♟️ Professional Chess Interface
+- **Player Avatars**: Profile display with ratings and captured pieces
+- **Move List Panel**: Opening names and algebraic notation
+- **Captured Pieces**: Horizontal display with Unicode chess symbols
+- **Action Controls**: Functional Hint, Undo, and Resign buttons
+- **Clean UI**: Professional chess.com-style design
 
-### 🎨 Modern UI/UX
-- **Fullscreen mode** with seamless toggle (ESC key support)
-- **Beautiful chess board** with piece animations
-- **Dark theme** optimized for long gaming sessions
-- **Responsive design** for desktop and mobile
-- **Real-time timer display** with countdown animations
-- **Player ratings** and profile information
-
-### 🏗️ Technical Architecture
-- **Frontend**: React 18 + TypeScript + Vite
-- **Backend**: Node.js + Express + Socket.IO
-- **Chess Engine**: chess.js for move validation
-- **UI Components**: Custom components with Tailwind CSS
-- **Real-time Communication**: WebSocket connections
-- **State Management**: React hooks with optimistic updates
+### 🎮 Game Features
+- **20 Progressive Levels**: Structured difficulty progression
+- **AI Bot Opponents**: Multiple personalities and playing styles
+- **Real-time Analysis**: Move quality feedback during play
+- **Post-game Analytics**: Detailed performance breakdown
+- **Toast Notifications**: Aid usage warnings and star caps
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 16.0.0 or higher
-- npm or yarn package manager
-- Modern web browser with WebSocket support
+- Node.js v20.19+
+- npm v10+
 
 ### Installation
-
-1. **Clone the repository**
 ```bash
-git clone https://github.com/yourusername/chess-academy-v3.git
-cd chess-academy-v3
-```
+# Clone the repository
+git clone https://github.com/KumarAnandSingh/Chess-V5.git
+cd Chess-V5/frontend/frontend
 
-2. **Install backend dependencies**
-```bash
-cd backend
+# Install dependencies
 npm install
-```
 
-3. **Install frontend dependencies**
-```bash
-cd ../frontend/frontend
-npm install
-```
-
-4. **Start the development servers**
-
-Backend (Terminal 1):
-```bash
-cd backend
-PORT=3002 npm run dev
-```
-
-Frontend (Terminal 2):
-```bash
-cd frontend/frontend
+# Start development server
 npm run dev
 ```
 
-5. **Open your browser**
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:3002
+### Access
+Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-## 🏃‍♂️ How to Play
+## 📊 Performance System
 
-1. **Join the Lobby**: Navigate to the multiplayer section
-2. **Select Time Control**: Choose from bullet, blitz, rapid, or classical
-3. **Find Opponent**: Automatic matchmaking will pair you with another player
-4. **Play Chess**: Make moves by clicking and dragging pieces
-5. **Chat**: Use the chat system to communicate with your opponent
-6. **Fullscreen**: Press the fullscreen button or F11 for immersive gameplay
-
-## 🏗️ Project Structure
-
+### Performance Index Calculation
 ```
-chess-academy-v3/
-├── backend/                    # Node.js backend server
-│   ├── src/
-│   │   ├── services/          # WebSocket and game logic
-│   │   ├── routes/           # Express API routes
-│   │   └── server.ts         # Main server file
-│   └── package.json
-├── frontend/
-│   └── frontend/              # React frontend application
-│       ├── src/
-│       │   ├── components/   # React components
-│       │   │   ├── chess/   # Chess board components
-│       │   │   ├── multiplayer/  # Multiplayer game components
-│       │   │   └── ui/      # Reusable UI components
-│       │   ├── utils/       # Utility functions
-│       │   └── App.tsx      # Main application component
-│       └── package.json
-├── docs/                      # Documentation files
-├── test-fullstack.sh         # Development testing script
-└── README.md                 # This file
+PI = 0.5×Result + 0.2×Quality + 0.2×Efficiency + 0.1×Time - Penalties
 ```
 
-## 🛠️ Development
+#### Components:
+- **Result Score**: Win=100, Draw=60, Loss=0
+- **Quality Score**: Based on move accuracy (I/M/B penalties)
+- **Efficiency Score**: Move count vs par comparison
+- **Time Score**: Average seconds per move evaluation
+- **Penalties**: Aid usage deductions (15×hints + 10×undos)
 
-### Backend Development
+### Star Rating System
+- **3★**: Win + PI≥85 + No hints used
+- **2★**: Win + PI≥65
+- **1★**: (Win OR Draw) + PI≥50
+- **Aid Penalties**: Regular levels max 2★, Boss levels max 1★
+
+### Move Quality Thresholds
+- **Inaccuracy**: Centipawn loss ≥40 and <80
+- **Mistake**: Centipawn loss ≥80 and <150
+- **Blunder**: Centipawn loss ≥150
+
+## 🎯 Level System
+
+### Standard Levels (1-20)
+- Progressive difficulty with varying par moves
+- Full aid availability (hints and undos)
+- Standard star rating system
+
+### Boss Levels (5, 10, 15)
+- Enhanced difficulty challenges
+- Stricter star caps when aids are used
+- Special achievement recognition
+
+## 🏗️ Architecture
+
+### Core Components
+```
+src/
+├── hooks/
+│   └── usePerformanceTracking.ts    # Main tracking system
+├── config/
+│   └── levelConfig.ts               # Level configurations
+├── components/
+│   ├── chess/
+│   │   ├── PlayVsComputer.tsx       # Main game component
+│   │   ├── PlayerAvatar.tsx         # Player profiles
+│   │   ├── MoveListPanel.tsx        # Move history
+│   │   └── PerformanceAnalysisModal.tsx # Post-game analysis
+│   └── ui/
+│       └── ToastNotification.tsx    # Aid usage notifications
+└── styles/
+    └── design-tokens.css            # Design system
+```
+
+### Data Flow
+1. **Game Start**: Initialize with level configuration
+2. **Move Recording**: Real-time analysis and tracking
+3. **Aid Usage**: Toast notifications and penalty tracking
+4. **Game End**: PI calculation and star rating
+5. **Session Storage**: Progress persistence until refresh
+
+## 📱 Usage
+
+### Starting a Game
+1. Navigate to "Play with Bot"
+2. Select difficulty level (1-20)
+3. Choose bot personality
+4. Begin playing with real-time tracking
+
+### Understanding Performance
+- **Green moves**: Excellent/Good play
+- **Yellow moves**: Inaccuracies (minor errors)
+- **Orange moves**: Mistakes (significant errors)
+- **Red moves**: Blunders (major errors)
+
+### Using Aids
+- **Hint**: Shows suggested move (15 point penalty)
+- **Undo**: Reverts last move (10 point penalty)
+- **Toast warnings**: Immediate feedback on star cap impact
+
+### Post-Game Analysis
+- **Performance Summary**: PI score and star rating
+- **Move Breakdown**: Quality analysis with timing
+- **Key Moments**: Critical position highlights
+- **Improvement Areas**: Specific feedback for growth
+
+## 🔧 Development
+
+### Scripts
 ```bash
-cd backend
-npm run dev          # Start development server with hot reload
-npm run build        # Build for production
-npm start           # Start production server
+npm run dev      # Start development server
+npm run build    # Production build
+npm run preview  # Preview production build
+npm run lint     # Code linting
+npm run test     # Run test suite
 ```
 
-### Frontend Development
-```bash
-cd frontend/frontend
-npm run dev         # Start Vite development server
-npm run build       # Build for production
-npm run preview     # Preview production build
+### Project Structure
+- **Frontend**: React + TypeScript + Vite
+- **Chess Engine**: Stockfish.js integration
+- **UI Framework**: shadcn/ui components
+- **Styling**: Tailwind CSS with design tokens
+- **State Management**: Zustand stores
+
+### Performance Tracking Implementation
+```typescript
+// Start game with level configuration
+const { startGame } = usePerformanceTracking();
+const gameId = startGame(levelId);
+
+// Record move analysis
+const { recordMove } = usePerformanceTracking();
+await recordMove(move, evalBefore, evalAfter, timeSpent);
+
+// Handle aid usage
+const { recordHint } = usePerformanceTracking();
+recordHint(); // Triggers toast notification
+
+// End game with results
+const { endGame } = usePerformanceTracking();
+const gameData = endGame(result, pgnString);
 ```
 
-### Full-Stack Testing
-```bash
-./test-fullstack.sh  # Test both frontend and backend
-```
+## 📚 Documentation
 
-## 🎯 Key Components
+- **[Performance Tracking Guide](./frontend/frontend/PERFORMANCE_TRACKING.md)**: Complete system documentation
+- **[Changelog](./CHANGELOG.md)**: Version history and updates
+- **[Level Configuration](./frontend/frontend/src/config/levelConfig.ts)**: Level settings and boss mechanics
 
-### ImprovedLiveChessGame
-- Main game interface with real-time board updates
-- Handles player moves, chat system, and game state
-- Supports fullscreen mode and responsive design
-- File: `/frontend/frontend/src/components/multiplayer/ImprovedLiveChessGame.tsx`
+## 🎯 Quality Assurance
 
-### SimpleMultiplayerLobby  
-- Matchmaking interface with time control selection
-- Real-time connection status and player authentication
-- File: `/frontend/frontend/src/components/multiplayer/SimpleMultiplayerLobby.tsx`
+### Validated Features
+- ✅ Exact PI calculation matching specifications
+- ✅ Star rating system with aid penalties
+- ✅ Boss level mechanics and restrictions
+- ✅ Toast notifications for aid usage
+- ✅ Session-based progress tracking
+- ✅ Professional UI matching reference designs
 
-### WebSocket Service
-- Handles all real-time communication
-- Manages game rooms and player matching
-- File: `/backend/src/services/simpleWebsocket.ts`
+### Test Coverage
+- Performance calculation accuracy (±1 tolerance)
+- Star rating edge cases and aid penalties
+- Level progression and boss mechanics
+- UI responsiveness and accessibility
+- Cross-browser compatibility
 
-## 🌟 Recent Updates (V3.0)
+## 🏆 Achievements
 
-### ✅ Fixed Issues
-- **Chat Attribution**: Messages now show correct usernames and colors
-- **Board Orientation**: Each player sees correct piece colors
-- **Fullscreen UX**: Added visible exit button and ESC key support
-- **Connection Stability**: Fixed disconnection issues during game creation
+- **Complete Performance System**: Professional chess analytics
+- **Session-Based Tracking**: No authentication required
+- **Progressive Difficulty**: 20 structured levels with boss challenges
+- **Professional UI**: Chess.com-style interface
+- **Real-time Feedback**: Move quality analysis during play
+- **Comprehensive Analytics**: Detailed post-game insights
 
-### ✨ New Features  
-- **Chess Quick Messages**: 12 pre-written chess-specific messages
-- **Advanced Chat UI**: Draggable, resizable, collapsible chat window
-- **Better Visual Feedback**: Improved animations and transitions
-- **Enhanced Matchmaking**: More stable player pairing system
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🤝 Contributing
 
@@ -187,24 +224,10 @@ npm run preview     # Preview production build
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📝 License
+## 📞 Support
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- [chess.js](https://github.com/jhlywa/chess.js) - Chess game logic
-- [Socket.IO](https://socket.io/) - Real-time communication
-- [React](https://reactjs.org/) - Frontend framework
-- [Tailwind CSS](https://tailwindcss.com/) - Styling framework
-
-## 🔗 Links
-
-- **Demo**: [Live Demo](https://studyify.in/chess) (Coming Soon)
-- **Documentation**: [Full Docs](./docs/)
-- **Issues**: [Report Issues](https://github.com/yourusername/chess-academy-v3/issues)
-- **Discussions**: [Community](https://github.com/yourusername/chess-academy-v3/discussions)
+For questions or support, please open an issue on GitHub or contact the development team.
 
 ---
 
-**Built with ❤️ for chess enthusiasts worldwide**
+**Chess Academy v5** - Master the game with professional-grade analytics and tracking! 🚀

@@ -1199,9 +1199,9 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-base)' }}>
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="shadow-sm border-b" style={{ backgroundColor: 'var(--color-surface-elevated)', borderColor: 'var(--color-border-default)' }}>
+      <div className="border-b bg-card">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-4">
@@ -1213,12 +1213,12 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({
                 ← Back to Lessons
               </Button>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">{lesson.title}</h1>
-                <p className="text-gray-600">{lesson.description}</p>
+                <h1 className="text-2xl font-bold text-foreground">{lesson.title}</h1>
+                <p className="text-muted-foreground">{lesson.description}</p>
               </div>
             </div>
             <div className="text-right">
-              <div className="text-sm text-gray-500">
+              <div className="text-sm text-muted-foreground">
                 Module {currentModuleIndex + 1} of {lesson.modules.length}
               </div>
               <Badge className="mt-1">{lesson.difficulty}</Badge>
@@ -1287,10 +1287,10 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({
                 onClick={() => setCurrentModuleIndex(index)}
                 className={`w-3 h-3 rounded-full transition-all ${
                   index === currentModuleIndex
-                    ? 'bg-blue-600'
+                    ? 'bg-primary'
                     : index < currentModuleIndex
                     ? 'bg-green-500'
-                    : 'bg-gray-300'
+                    : 'bg-muted'
                 }`}
               />
             ))}
