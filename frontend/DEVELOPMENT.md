@@ -72,7 +72,7 @@ src/
 │   ├── openings/        # V1 - Opening trainer
 │   └── analysis/        # V1 - Analysis board
 ├── services/
-│   ├── stockfishEngine.ts    # V0 - AI engine
+│   ├── aiEngine.ts           # V0 - AI engine
 │   ├── multiplayerService.ts # V1 - Real-time multiplayer
 │   ├── puzzleService.ts      # V1 - Puzzle generation
 │   └── analysisService.ts    # V1 - Position analysis

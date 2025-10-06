@@ -29,7 +29,7 @@
 
 ### 2. **Chess Engine Initialization Loop**
 - **Severity**: Critical ⛔  
-- **Component**: `PlayVsComputer.tsx` + `stockfishEngine.ts`  
+- **Component**: `PlayVsComputer.tsx` + `aiEngine.ts`
 - **Issue**: Engine shows "Initializing engine..." indefinitely  
 - **Root Cause**: Event emitter not properly triggering 'ready' state  
 - **Impact**: Computer opponent games cannot start  
@@ -166,7 +166,7 @@
    - Test turn indicators and game status
 
 3. **Fix Engine Initialization**
-   - Debug event emitter system in stockfishEngine.ts
+   - Debug event emitter system in aiEngine.ts
    - Add proper error handling for engine failures
    - Implement fallback mock engine that works
 

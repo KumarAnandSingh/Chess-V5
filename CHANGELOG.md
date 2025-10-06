@@ -142,7 +142,7 @@ PI = 0.5×ResultScore + 0.2×QualityScore + 0.2×EfficiencyScore + 0.1×TimeScor
 ### ♟️ Chess Functionality
 - **Bot Personality System**: Multiple AI opponents with themes
 - **Enhanced Gameplay**: Improved move validation and game state management
-- **Stockfish Integration**: Professional chess engine implementation
+- **Custom Engine Implementation**: Professional chess engine features without external binaries
 - **Game Analysis**: Position evaluation and move suggestions
 
 ---

@@ -54,7 +54,7 @@
 ### **Chess Engine & Logic**
 - **Chess.js** for game logic and FEN notation handling
 - **react-chessboard** for interactive board rendering
-- **Stockfish Engine Integration** with intelligent move generation
+- **Custom Training Engine** with intelligent move generation
 
 ### **UI & Styling**
 - **Tailwind CSS** for utility-first styling
@@ -79,7 +79,7 @@
 Each level features unique bot personalities:
 - Bobby Beginner (friendly and encouraging)
 - Magnus Master (masterful and profound)
-- Stockfish Supreme (mechanical precision)
+- Precision Master (mechanical precision)
 - Divinity Chess God (ultimate chess mastery)
 
 ### **Performance Analysis**
@@ -144,7 +144,7 @@ src/
 │   ├── ui/                 # UI components (shadcn/ui)
 │   └── ...
 ├── services/               # Core services
-│   ├── stockfishEngine.ts  # Chess engine integration
+│   ├── aiEngine.ts         # Chess engine integration
 │   └── audioService.ts     # Audio feedback system
 ├── stores/                 # State management (Zustand)
 └── styles/                 # CSS and styling
@@ -200,7 +200,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Chess.js** team for the excellent chess logic library
 - **react-chessboard** for the interactive board component
-- **Stockfish** chess engine for move generation inspiration
+- **Custom-built** chess engine for move generation inspiration
 - **shadcn/ui** for the beautiful component library
 - **Framer Motion** for smooth animations
 
