@@ -156,7 +156,7 @@ npm run test     # Run test suite
 
 ### Project Structure
 - **Frontend**: React + TypeScript + Vite
-- **Chess Engine**: Stockfish.js integration
+- **Chess Engine**: Custom lightweight TypeScript engine
 - **UI Framework**: shadcn/ui components
 - **Styling**: Tailwind CSS with design tokens
 - **State Management**: Zustand stores

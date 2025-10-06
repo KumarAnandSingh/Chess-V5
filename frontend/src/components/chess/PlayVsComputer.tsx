@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Chess } from 'chess.js';
 import { ChessBoard } from './ChessBoard';
-import { stockfishEngine } from '../../services/stockfishEngine';
+import { trainingEngine } from '../../services/aiEngine';
 import { useGamificationStore } from '../../stores/gamificationStore';
 import { AICoach } from '../ai/AICoach';
 import { useGameCoach } from '../../hooks/useAICoach';
@@ -46,23 +46,23 @@ export const PlayVsComputer: React.FC<PlayVsComputerProps> = ({
     console.log('PlayVsComputer: Setting up engine listeners');
     
     // FIXED: Check if engine is already ready
-    if (stockfishEngine.ready) {
+    if (trainingEngine.ready) {
       console.log('PlayVsComputer: Engine already ready');
       setEngineReady(true);
-      stockfishEngine.setDifficulty(difficulty);
+      trainingEngine.setDifficulty(difficulty);
     }
-    
+
     // Set up ready event listener
     const onReady = () => {
       console.log('PlayVsComputer: Engine ready event received');
       setEngineReady(true);
-      stockfishEngine.setDifficulty(difficulty);
+      trainingEngine.setDifficulty(difficulty);
     };
 
-    stockfishEngine.on('ready', onReady);
-    
+    trainingEngine.on('ready', onReady);
+
     return () => {
-      stockfishEngine.off('ready', onReady);
+      trainingEngine.off('ready', onReady);
     };
   }, [difficulty]);
 
@@ -81,7 +81,7 @@ export const PlayVsComputer: React.FC<PlayVsComputerProps> = ({
     setIsComputerThinking(true);
     try {
       const currentFen = game.fen();
-      const bestMove = await stockfishEngine.getBestMove(currentFen);
+      const bestMove = await trainingEngine.getBestMove(currentFen);
       
       // Make the move if it's still valid
       const gameCopy = new Chess(currentFen);
@@ -94,7 +94,7 @@ export const PlayVsComputer: React.FC<PlayVsComputerProps> = ({
         
         // Get evaluation after computer move
         try {
-          const evalResult = await stockfishEngine.getEvaluation(gameCopy.fen());
+          const evalResult = await trainingEngine.getEvaluation(gameCopy.fen());
           setEvaluation(evalResult.score);
         } catch (evalError) {
           console.log('Evaluation error:', evalError);

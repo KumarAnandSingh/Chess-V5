@@ -534,7 +534,7 @@ model BotGame {
   timeSpent    Int       @default(0) // Total time in seconds
   movesCount   Int       @default(0)
   keyMoments   Json? // Array of 3 key moments with analysis
-  analysisData Json? // Stockfish analysis data
+  analysisData Json? // Engine analysis data
   completedAt  DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt

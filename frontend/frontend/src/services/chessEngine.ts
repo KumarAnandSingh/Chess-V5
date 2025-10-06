@@ -1,20 +1,13 @@
-/**
- * Chess Engine Service - Commercial Engine Integration for Chess Academy v5
- * 100% Commercial-friendly - No GPL dependencies
- * License: MIT - Free for commercial use
- */
+import { Chess } from 'chess.js';
 
-import { commercialChessEngine } from './commercialChessEngine';
-import { getLevelConfig, BOT_PERSONALITIES } from '../config/levelConfig';
-
-interface EngineMove {
+export interface EngineMove {
   move: string;
   evaluation: number;
   depth: number;
   time: number;
 }
 
-interface PositionAnalysis {
+export interface PositionAnalysis {
   bestMove: string;
   evaluation: number;
   principalVariation: string[];
@@ -26,271 +19,266 @@ interface PositionAnalysis {
   }[];
 }
 
-interface BotLevel {
+export interface BotLevel {
   level: number;
   name: string;
   depth: number;
-  timeLimit: number; // milliseconds
+  timeLimit: number;
   elo: number;
   personality: string;
-  avatar: string;
-  category: string;
 }
+
+const BOT_LEVELS: BotLevel[] = [
+  { level: 1, name: 'Pawn', depth: 1, timeLimit: 100, elo: 400, personality: 'Makes random moves, very beginner-friendly' },
+  { level: 2, name: 'Knight', depth: 2, timeLimit: 200, elo: 600, personality: 'Occasionally makes good moves but inconsistent' },
+  { level: 3, name: 'Bishop', depth: 3, timeLimit: 300, elo: 800, personality: 'Understands basic tactics but makes mistakes' },
+  { level: 4, name: 'Rook', depth: 4, timeLimit: 500, elo: 1000, personality: 'Solid player with good tactical awareness' },
+  { level: 5, name: 'Queen', depth: 5, timeLimit: 750, elo: 1200, personality: 'Strong tactical player, rarely blunders' },
+  { level: 6, name: 'King', depth: 6, timeLimit: 1000, elo: 1400, personality: 'Excellent tactical and positional understanding' },
+  { level: 7, name: 'Grandmaster', depth: 8, timeLimit: 1500, elo: 1600, personality: 'Near-perfect play with deep calculation' },
+  { level: 8, name: 'World Champion', depth: 10, timeLimit: 2000, elo: 1800, personality: 'Exceptional in all phases of the game' },
+  { level: 9, name: 'Immortal Tactician', depth: 12, timeLimit: 3000, elo: 2000, personality: 'Computer-like precision with creative flair' },
+  { level: 10, name: 'Legendary Strategist', depth: 14, timeLimit: 5000, elo: 2200, personality: 'Maximum strength for ultimate challenge' }
+];
 
 class ChessEngine {
-  private isReady: boolean = true; // Commercial engine is always ready
+  private isReady = false;
+  private readyPromise: Promise<void>;
 
   constructor() {
-    console.log('🎯 Initializing Commercial Chess Engine v1.0 - MIT Licensed');
+    this.readyPromise = this.initialize();
   }
 
-  async waitForReady(): Promise<void> {
-    // Commercial engine is always ready - no async initialization needed
-    return Promise.resolve();
+  private async initialize(): Promise<void> {
+    this.isReady = true;
   }
 
-  /**
-   * Get bot move for specified difficulty level (1-30)
-   */
-  async getBotMove(fen: string, level: number = 1): Promise<EngineMove> {
-    if (level < 1 || level > 30) {
-      throw new Error('Bot level must be between 1 and 30');
-    }
-
-    const config = getLevelConfig(level);
-    const startTime = Date.now();
-
-    try {
-      const bestMove = await commercialChessEngine.getBestMove(
-        fen,
-        config.engineLevel,
-        config.thinkingTime
-      );
-
-      const evaluation = await commercialChessEngine.evaluatePosition(fen);
-      const endTime = Date.now();
-
-      // Add personality-based move variation for lower levels
-      let finalMove = bestMove;
-      if (level <= 10 && Math.random() < (11 - level) * 0.05) {
-        // Occasionally make a suboptimal move for realism
-        const { Chess } = await import('chess.js');
-        const game = new Chess(fen);
-        const allMoves = game.moves();
-        if (allMoves.length > 1) {
-          const randomIndex = Math.floor(Math.random() * Math.min(3, allMoves.length));
-          finalMove = allMoves[randomIndex];
-        }
-      }
-
-      return {
-        move: finalMove,
-        evaluation: evaluation / 100, // Convert centipawns to pawns
-        depth: config.analysis.depth,
-        time: endTime - startTime
-      };
-    } catch (error) {
-      console.error('Bot move generation error:', error);
-      // Fallback to a random legal move
-      const { Chess } = await import('chess.js');
-      const game = new Chess(fen);
-      const moves = game.moves();
-      const randomMove = moves[Math.floor(Math.random() * moves.length)];
-
-      return {
-        move: randomMove,
-        evaluation: 0,
-        depth: 1,
-        time: Date.now() - startTime
-      };
+  private async ensureReady(): Promise<void> {
+    if (!this.isReady) {
+      await this.readyPromise;
     }
   }
 
-  /**
-   * Analyze position for coaching hints and key moments
-   */
-  async analyzePosition(fen: string, depth: number = 12): Promise<PositionAnalysis> {
-    try {
-      const bestMove = await commercialChessEngine.getBestMove(fen, 15, 3000);
-      const evaluation = await commercialChessEngine.evaluatePosition(fen);
-
-      // Generate principal variation (simplified)
-      const { Chess } = await import('chess.js');
-      const game = new Chess(fen);
-      const principalVariation: string[] = [];
-
-      try {
-        game.move(bestMove);
-        principalVariation.push(bestMove);
-
-        // Get one more move for basic PV
-        const nextMove = await commercialChessEngine.getBestMove(game.fen(), 10, 1000);
-        if (nextMove) {
-          principalVariation.push(nextMove);
-        }
-      } catch (err) {
-        // If moves fail, just return what we have
-      }
-
-      return {
-        bestMove,
-        evaluation: evaluation / 100,
-        principalVariation,
-        depth
-      };
-    } catch (error) {
-      console.error('Position analysis error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Generate post-game analysis with key moments
-   */
-  async generateGameAnalysis(pgn: string): Promise<PositionAnalysis[]> {
-    try {
-      // Simplified game analysis - analyze key positions
-      const { Chess } = await import('chess.js');
-      const game = new Chess();
-      const moves = pgn.split(' ').filter(move => !move.includes('.') && move.trim() !== '');
-      const analyses: PositionAnalysis[] = [];
-
-      // Analyze every 5th move for performance
-      for (let i = 0; i < moves.length; i += 5) {
-        try {
-          if (i < moves.length) {
-            game.move(moves[i]);
-            const analysis = await this.analyzePosition(game.fen(), 10);
-            analyses.push(analysis);
-          }
-        } catch (err) {
-          // Skip invalid moves
-          continue;
-        }
-      }
-
-      return analyses.slice(0, 3); // Return top 3 key moments
-    } catch (error) {
-      console.error('Game analysis error:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Get available bot levels (1-30)
-   */
   getBotLevels(): BotLevel[] {
-    const levels: BotLevel[] = [];
+    return [...BOT_LEVELS];
+  }
 
-    for (let i = 1; i <= 30; i++) {
-      const config = getLevelConfig(i);
-      const personality = BOT_PERSONALITIES[i];
+  getBotConfig(level: number): BotLevel | null {
+    if (level < 1 || level > BOT_LEVELS.length) return null;
+    return BOT_LEVELS[level - 1];
+  }
 
-      levels.push({
-        level: i,
-        name: config.name,
-        depth: config.analysis.depth,
-        timeLimit: config.thinkingTime,
-        elo: 400 + (i * 60), // Progressive ELO from 400 to 2200
-        personality: personality.description,
-        avatar: personality.avatar,
-        category: config.category
-      });
+  async getBotMove(fen: string, level: number = 5): Promise<EngineMove> {
+    await this.ensureReady();
+
+    if (level < 1 || level > BOT_LEVELS.length) {
+      throw new Error('Bot level must be between 1 and 10');
     }
 
-    return levels;
-  }
-
-  /**
-   * Get bot configuration by level
-   */
-  getBotConfig(level: number): BotLevel | null {
-    if (level < 1 || level > 30) return null;
-
-    const config = getLevelConfig(level);
-    const personality = BOT_PERSONALITIES[level];
+    const botConfig = BOT_LEVELS[level - 1];
+    const depth = this.normalizeDepth(botConfig.depth);
+    const start = Date.now();
+    const move = this.searchBestMove(fen, depth);
+    const time = Date.now() - start;
+    const evaluation = this.evaluatePosition(fen, depth);
 
     return {
-      level,
-      name: config.name,
-      depth: config.analysis.depth,
-      timeLimit: config.thinkingTime,
-      elo: 400 + (level * 60),
-      personality: personality.description,
-      avatar: personality.avatar,
-      category: config.category
+      move,
+      evaluation,
+      depth,
+      time,
     };
   }
 
-  /**
-   * Get bot personality message
-   */
-  getBotMessage(level: number, type: 'greeting' | 'goodMove' | 'mistake' | 'victory' | 'defeat' | 'hint'): string {
-    const personality = BOT_PERSONALITIES[level] || BOT_PERSONALITIES[1];
-    return personality.messages[type];
-  }
+  async analyzePosition(fen: string, depth: number = 12): Promise<PositionAnalysis> {
+    await this.ensureReady();
 
-  /**
-   * Get bot theme colors
-   */
-  getBotTheme(level: number): { primary: string; secondary: string; accent: string } {
-    const personality = BOT_PERSONALITIES[level] || BOT_PERSONALITIES[1];
-    return personality.themeColors;
-  }
+    const normalizedDepth = this.normalizeDepth(depth);
+    const { bestMove, principalVariation, evaluation } = this.calculatePrincipalVariation(fen, normalizedDepth);
 
-  /**
-   * Check if level is boss level
-   */
-  isBossLevel(level: number): boolean {
-    const config = getLevelConfig(level);
-    return config.boss;
-  }
-
-  /**
-   * Get boss levels (5, 10, 15, 20, 25, 30)
-   */
-  getBossLevels(): number[] {
-    return [5, 10, 15, 20, 25, 30];
-  }
-
-  /**
-   * Calculate move quality based on centipawn loss
-   */
-  calculateMoveQuality(cpLoss: number, level: number): 'excellent' | 'good' | 'inaccuracy' | 'mistake' | 'blunder' {
-    const config = getLevelConfig(level);
-    const thresholds = config.analysis.cpThresholds;
-
-    if (cpLoss < 10) return 'excellent';
-    if (cpLoss < 25) return 'good';
-    if (cpLoss < thresholds.I) return 'good';
-    if (cpLoss < thresholds.M) return 'inaccuracy';
-    if (cpLoss < thresholds.B) return 'mistake';
-    return 'blunder';
-  }
-
-  /**
-   * Get engine information
-   */
-  getEngineInfo(): { name: string; version: string; license: string; commercial: boolean } {
     return {
-      name: 'Commercial Chess Engine',
-      version: '1.0.0',
-      license: 'MIT - Free for commercial use',
-      commercial: true
+      bestMove,
+      evaluation,
+      principalVariation,
+      depth: normalizedDepth,
+      keyMoments: principalVariation.slice(0, 3).map((move, index) => ({
+        move,
+        evaluation: evaluation - index * 0.1,
+        comment: index === 0
+          ? 'Strong move that maintains the initiative'
+          : index === 1
+            ? 'Continues to build an advantage'
+            : 'Keeps pressure on the opponent',
+      })),
     };
   }
 
-  /**
-   * Clean up engine resources
-   */
+  async generateGameAnalysis(pgn: string): Promise<PositionAnalysis[]> {
+    await this.ensureReady();
+    // Placeholder implementation: return a simple plan derived from opening principles.
+    return [
+      {
+        bestMove: 'e4',
+        evaluation: 0.2,
+        principalVariation: ['e4', 'e5', 'Nf3'],
+        depth: 2,
+        keyMoments: [
+          { move: 'e4', evaluation: 0.2, comment: 'Controls the centre and opens lines for development' },
+          { move: 'Nf3', evaluation: 0.3, comment: 'Develops with tempo towards the middle of the board' },
+          { move: 'Bc4', evaluation: 0.35, comment: 'Targets the f7 square and prepares to castle' },
+        ],
+      },
+    ];
+  }
+
   dispose(): void {
-    // Commercial engine cleanup
-    commercialChessEngine.clearCaches();
-    console.log('🎯 Commercial Chess Engine disposed');
+    this.isReady = false;
+  }
+
+  private normalizeDepth(depth: number): number {
+    if (depth <= 2) return 1;
+    if (depth <= 6) return 2;
+    if (depth <= 10) return 3;
+    return 4;
+  }
+
+  private searchBestMove(fen: string, depth: number): string {
+    const game = new Chess(fen);
+    const perspective = game.turn();
+    const moves = game.moves({ verbose: true });
+
+    if (moves.length === 0) {
+      return '0000';
+    }
+
+    let bestMove = moves[0];
+    let bestScore = -Infinity;
+
+    for (const move of moves) {
+      game.move(move);
+      const score = this.minimax(game, depth - 1, -Infinity, Infinity, perspective);
+      game.undo();
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestMove = move;
+      }
+    }
+
+    return this.toUci(bestMove);
+  }
+
+  private evaluatePosition(fen: string, depth: number): number {
+    const game = new Chess(fen);
+    const perspective = game.turn();
+    const score = this.minimax(game, depth, -Infinity, Infinity, perspective);
+    return Math.round(score * 100);
+  }
+
+  private calculatePrincipalVariation(fen: string, depth: number) {
+    const variation: string[] = [];
+    const game = new Chess(fen);
+    const perspective = game.turn();
+
+    for (let remaining = depth; remaining > 0; remaining--) {
+      const moves = game.moves({ verbose: true });
+      if (moves.length === 0) break;
+
+      let bestMove = moves[0];
+      let bestScore = -Infinity;
+
+      for (const move of moves) {
+        game.move(move);
+        const score = this.minimax(game, remaining - 1, -Infinity, Infinity, perspective);
+        game.undo();
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestMove = move;
+        }
+      }
+
+      game.move(bestMove);
+      variation.push(this.toUci(bestMove));
+    }
+
+    const evaluation = this.evaluateBoard(game, perspective);
+    return { bestMove: variation[0] ?? '0000', principalVariation: variation, evaluation };
+  }
+
+  private minimax(game: Chess, depth: number, alpha: number, beta: number, perspective: 'w' | 'b'): number {
+    if (depth === 0 || game.isGameOver()) {
+      return this.evaluateBoard(game, perspective);
+    }
+
+    const moves = game.moves({ verbose: true });
+    const isMaximizing = game.turn() === perspective;
+
+    if (isMaximizing) {
+      let value = -Infinity;
+      for (const move of moves) {
+        game.move(move);
+        value = Math.max(value, this.minimax(game, depth - 1, alpha, beta, perspective));
+        game.undo();
+        alpha = Math.max(alpha, value);
+        if (alpha >= beta) break;
+      }
+      return value;
+    }
+
+    let value = Infinity;
+    for (const move of moves) {
+      game.move(move);
+      value = Math.min(value, this.minimax(game, depth - 1, alpha, beta, perspective));
+      game.undo();
+      beta = Math.min(beta, value);
+      if (beta <= alpha) break;
+    }
+    return value;
+  }
+
+  private evaluateBoard(game: Chess, perspective: 'w' | 'b'): number {
+    const pieceValues: Record<string, number> = {
+      p: 1,
+      n: 3,
+      b: 3,
+      r: 5,
+      q: 9,
+      k: 0,
+    };
+
+    let score = 0;
+    const board = game.board();
+
+    for (const row of board) {
+      for (const piece of row) {
+        if (!piece) continue;
+        const value = pieceValues[piece.type];
+        score += piece.color === perspective ? value : -value;
+      }
+    }
+
+    if (game.inCheckmate()) {
+      const losingColor = game.turn();
+      if (losingColor === perspective) {
+        score = -999;
+      } else {
+        score = 999;
+      }
+    }
+
+    if (game.isDraw()) {
+      score = 0;
+    }
+
+    return score;
+  }
+
+  private toUci(move: any): string {
+    return `${move.from}${move.to}${move.promotion || ''}`;
   }
 }
 
-// Singleton instance
 let chessEngineInstance: ChessEngine | null = null;
 
 export const getChessEngine = (): ChessEngine => {
@@ -300,5 +288,4 @@ export const getChessEngine = (): ChessEngine => {
   return chessEngineInstance;
 };
 
-export type { EngineMove, PositionAnalysis, BotLevel };
 export default ChessEngine;

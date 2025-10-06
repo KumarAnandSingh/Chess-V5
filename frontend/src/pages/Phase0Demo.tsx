@@ -1,6 +1,6 @@
 /**
  * Phase 0 Demo Page - Showcase core features
- * Demonstrates Stockfish integration, Daily Plan, and Bot games
+ * Demonstrates training engine integration, Daily Plan, and Bot games
  */
 
 import React, { useState, useEffect } from 'react';
@@ -23,7 +23,7 @@ const Phase0Demo: React.FC = () => {
 
   const tabs = [
     { id: 'daily-plan', label: 'Daily Plan', description: 'Solve 3 • Learn 1 • Play 1' },
-    { id: 'bot-game', label: 'Bot Games', description: '10 difficulty levels with Stockfish' },
+    { id: 'bot-game', label: 'Bot Games', description: '10 difficulty levels with training engine' },
     { id: 'calibration', label: 'Calibration', description: '12-position strength test' }
   ];
 
@@ -104,7 +104,7 @@ const Phase0Demo: React.FC = () => {
                     </li>
                     <li className="flex items-center">
                       <span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
-                      Stockfish WASM integration
+                      Custom engine integration
                     </li>
                     <li className="flex items-center">
                       <span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
@@ -213,7 +213,7 @@ const Phase0Demo: React.FC = () => {
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Play vs Chess Bots</h2>
               <p className="text-gray-600">
-                Practice against 10 different difficulty levels powered by Stockfish engine. Each bot has unique personality and playing strength.
+                Practice against 10 different difficulty levels powered by our training engine. Each bot has unique personality and playing strength.
               </p>
             </div>
 
@@ -255,7 +255,7 @@ const Phase0Demo: React.FC = () => {
                 <div className="bg-green-50 rounded-lg p-6">
                   <h3 className="text-lg font-semibold text-green-900 mb-2">Features</h3>
                   <ul className="space-y-2 text-sm text-green-800">
-                    <li>• Real-time Stockfish analysis</li>
+                    <li>• Real-time training engine analysis</li>
                     <li>• Post-game "3 key moments" review</li>
                     <li>• Move time and evaluation display</li>
                     <li>• PGN capture for later analysis</li>

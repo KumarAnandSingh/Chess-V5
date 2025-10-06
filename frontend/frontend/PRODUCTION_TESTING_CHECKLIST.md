@@ -130,7 +130,7 @@
 ### 🤖 AI Opponent Functionality
 - [ ] **10 difficulty levels available (400-2200 ELO)**
 - [ ] Bot makes legal moves only
-- [ ] **No Stockfish CSP errors**
+- [ ] **No engine CSP errors**
 - [ ] **Pre-defined moves work as fallback**
 - [ ] Move timing appropriate (not too fast/slow)
 - [ ] Game endings handled correctly

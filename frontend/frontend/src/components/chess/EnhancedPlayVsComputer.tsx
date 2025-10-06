@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Chess } from 'chess.js';
 import { ChessBoard } from './ChessBoard';
-import { stockfishEngine } from '../../services/stockfishEngine';
+import { trainingEngine } from '../../services/aiEngine';
 import { useGamificationStore } from '../../stores/gamificationStore';
 import { GameLevel, GameLevelDisplay, GAME_LEVELS } from './GameLevel';
 import { Button } from '../ui/button';
@@ -175,7 +175,7 @@ export const EnhancedPlayVsComputer: React.FC<EnhancedPlayVsComputerProps> = ({
     setMoveHistory([]);
 
     // Configure engine for selected level
-    stockfishEngine.setDifficulty(
+    trainingEngine.setDifficulty(
       currentLevel.difficulty === 'beginner' ? 'easy' :
       currentLevel.difficulty === 'intermediate' ? 'medium' :
       currentLevel.difficulty === 'advanced' ? 'hard' : 'expert'
@@ -208,7 +208,7 @@ export const EnhancedPlayVsComputer: React.FC<EnhancedPlayVsComputerProps> = ({
       
       await new Promise(resolve => setTimeout(resolve, Math.max(thinkingTime, 500)));
       
-      const bestMove = await stockfishEngine.getBestMove(gameState.fen(), currentLevel.skillLevel);
+      const bestMove = await trainingEngine.getBestMove(gameState.fen(), currentLevel.skillLevel);
       
       console.log('Computer received move from engine:', bestMove);
       
@@ -464,7 +464,7 @@ export const EnhancedPlayVsComputer: React.FC<EnhancedPlayVsComputerProps> = ({
 
     setShowHint(true);
     try {
-      const bestMove = await stockfishEngine.getBestMove(gamePosition, 15); // Higher skill for hints
+      const bestMove = await trainingEngine.getBestMove(gamePosition, 15); // Higher skill for hints
       if (bestMove && bestMove !== 'a1a1') {
         setHintMove(bestMove);
         // Show hint for 3 seconds
