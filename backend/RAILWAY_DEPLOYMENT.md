@@ -89,7 +89,7 @@ railway variables set COOKIE_SECRET="your-super-secret-cookie-key"
 
 # Optional: External APIs
 railway variables set OPENAI_API_KEY="your-openai-api-key"
-railway variables set STOCKFISH_API_URL="your-stockfish-api-url"
+railway variables set TRAINING_ENGINE_URL="your-engine-api-url"
 ```
 
 ### 3.2 Update Local .env for Testing

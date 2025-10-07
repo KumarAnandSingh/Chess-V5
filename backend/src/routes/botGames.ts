@@ -23,8 +23,8 @@ const BOT_LEVELS = [
   { level: 6, name: "King", depth: 6, timeLimit: 1000, elo: 1400, personality: "Excellent tactical and positional understanding" },
   { level: 7, name: "Grandmaster", depth: 8, timeLimit: 1500, elo: 1600, personality: "Near-perfect play with deep calculation" },
   { level: 8, name: "World Champion", depth: 10, timeLimit: 2000, elo: 1800, personality: "Exceptional in all phases of the game" },
-  { level: 9, name: "Stockfish Junior", depth: 12, timeLimit: 3000, elo: 2000, personality: "Computer-level precision" },
-  { level: 10, name: "Stockfish Master", depth: 14, timeLimit: 5000, elo: 2200, personality: "Maximum strength for ultimate challenge" }
+  { level: 9, name: "Immortal Tactician", depth: 12, timeLimit: 3000, elo: 2000, personality: "Computer-like precision with creative flair" },
+  { level: 10, name: "Legendary Strategist", depth: 14, timeLimit: 5000, elo: 2200, personality: "Maximum strength for ultimate challenge" }
 ];
 
 /**
@@ -294,7 +294,7 @@ router.post('/:gameId/move', [
 
 /**
  * POST /api/bot-games/:gameId/bot-move
- * Submit bot move (called by frontend after getting move from Stockfish)
+ * Submit bot move (called by frontend after getting move from training engine)
  */
 router.post('/:gameId/bot-move', [
   authenticateToken,

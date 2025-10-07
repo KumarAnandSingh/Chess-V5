@@ -1,6 +1,6 @@
 /**
  * Bot Game Component - Play against AI opponents
- * Integrates with Stockfish engine for different difficulty levels
+ * Integrates with custom training engine for different difficulty levels
  */
 
 import React, { useState, useCallback, useEffect } from 'react';

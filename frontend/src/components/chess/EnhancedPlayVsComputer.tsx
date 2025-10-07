@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Chess } from 'chess.js';
 import { ChessBoard } from './ChessBoard';
-import { stockfishEngine } from '../../services/stockfishEngine';
+import { trainingEngine } from '../../services/aiEngine';
 import { useGamificationStore } from '../../stores/gamificationStore';
 import { GameLevel, GameLevelDisplay, GAME_LEVELS } from './GameLevel';
 import { Button } from '../ui/button';
@@ -152,7 +152,7 @@ export const EnhancedPlayVsComputer: React.FC<EnhancedPlayVsComputerProps> = ({
     setGameStartTime(Date.now());
     
     // Configure engine for selected level
-    stockfishEngine.setDifficulty(
+    trainingEngine.setDifficulty(
       currentLevel.difficulty === 'beginner' ? 'easy' :
       currentLevel.difficulty === 'intermediate' ? 'medium' :
       currentLevel.difficulty === 'advanced' ? 'hard' : 'expert'
@@ -185,7 +185,7 @@ export const EnhancedPlayVsComputer: React.FC<EnhancedPlayVsComputerProps> = ({
       
       await new Promise(resolve => setTimeout(resolve, Math.max(thinkingTime, 500)));
       
-      const bestMove = await stockfishEngine.getBestMove(gameState.fen(), currentLevel.skillLevel);
+      const bestMove = await trainingEngine.getBestMove(gameState.fen(), currentLevel.skillLevel);
       
       console.log('Computer received move from engine:', bestMove);
       

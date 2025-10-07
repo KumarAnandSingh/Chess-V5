@@ -48,13 +48,13 @@ The comprehensive QA testing confirms that all Phase 1 and Phase 2 critical fixe
 #### **Engine Initialization (CRITICAL FIX #2)**
 - **Status:** ✅ **FIXED & VALIDATED**
 - **Previous Issue:** Engine initialization hanging indefinitely on "Initializing engine..."
-- **Fix Implemented:** Enhanced `/src/services/stockfishEngine.ts` with improved event emission and ready state detection
+- **Fix Implemented:** Enhanced `/src/services/aiEngine.ts` with improved event emission and ready state detection
 - **Validation Results:**
   - ✅ Engine initialization completes within 10 seconds (no hanging)
   - ✅ Mock engine provides immediate ready state for development
   - ✅ Engine ready events properly emitted and handled
   - ✅ Computer move generation working after engine ready
-  - ✅ Graceful fallback to mock engine when real Stockfish unavailable
+- ✅ Graceful fallback to mock engine when external engine unavailable
 
 **Evidence:**
 - Test confirmed: "Engine initialization completed" within timeout
